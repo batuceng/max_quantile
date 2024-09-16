@@ -12,7 +12,8 @@ class GridQuantizer(nn.Module):
             proto_count_per_dim = [proto_count_per_dim] * d  # Make it a list of length d
         assert len(proto_count_per_dim) == d, "proto_count_per_dim must be of length d or a single integer"
 
-        grids = [np.linspace(self.mins[i], self.maxs[i], proto_count_per_dim[i]) for i in range(d)]  # List of (proto_count_per_dim[i],) for each dimension
+        boundaries = [np.linspace(self.mins[i], self.maxs[i], proto_count_per_dim[i]+1) for i in range(d)]  # List of (proto_count_per_dim[i],) for each dimension
+        grids = [[np.mean([up,down]) for up,down in zip(bounds[1:],bounds[:-1])] for bounds in boundaries] 
         
         grid = np.meshgrid(*grids)  # This creates a grid for each dimension
         protos_numpy = np.vstack([g.ravel() for g in grid]).T  # (k^d, d), where k varies per dimension based on proto_count_per_dim
@@ -38,11 +39,15 @@ class VoronoiQuantizer(GridQuantizer):
 
     # Delete the prototypes in the given indices
     def remove_proto(self, indices):
-        self.protos = self.protos[~indices]
+        mask = np.full(len(self.protos),True,dtype=bool)
+        mask[indices] = False
+        self.protos = self.protos[mask]
 
     # Repeat the prototypes in the given indices and concat to the end
-    def remove_proto(self, indices):
-        self.protos = torch.vstack(self.protos, self.protos[indices])
+    def add_proto(self, indices):
+        mask = np.full(len(self.protos),False,dtype=bool)
+        mask[indices] = True
+        self.protos = torch.vstack(self.protos, self.protos[mask])
 
     def get_protos(self):
         return self.protos
