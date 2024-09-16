@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 # class RegressionModel(nn.Module):
 #     def __init__(self, input_dim, output_dim):
@@ -21,10 +22,25 @@ class ProtoClassifier(nn.Module):
             nn.ReLU(),
             nn.Linear(self.hidden_size, self.hidden_size),
             nn.ReLU(),
-            nn.Linear(self.hidden_size, self.proto_count),
         )
+        self.head = nn.Linear(self.hidden_size, self.proto_count)
         
     def forward(self, x):
         x = self.net(x)
+        x = self.head(x)
         return x
     
+    # Delete the prototypes in the given indices
+    def remove_proto(self, indices):
+        mask = np.full(len(self.head.weight),True,dtype=bool)
+        mask[indices] = False
+        self.head.weight = self.head.weight[mask]
+        self.head.bias = self.head.bias[mask]
+
+    # Repeat the prototypes in the given indices and concat to the end
+    def add_proto(self, indices):
+        mask = np.full(len(self.head.weight),False,dtype=bool)
+        mask[indices] = True
+        self.head.weight = torch.vstack(self.head.weight, self.head.weight[mask])
+        self.head.bias = torch.vstack(self.head.bias, self.head.bias[mask])
+        
