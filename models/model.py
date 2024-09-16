@@ -10,11 +10,11 @@ import torch.nn as nn
 #         return self.fc(x)
     
 class ProtoClassifier(nn.Module):
-    def __init__(self, input_dim, output_dim, proto_count):
+    def __init__(self, input_dim, output_dim, proto_count_per_dim):
         super(ProtoClassifier, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.proto_count = proto_count
+        self.proto_count = proto_count_per_dim**output_dim
         self.hidden_size = 256
         self.net = nn.Sequential(
             nn.Linear(self.input_dim, self.hidden_size),
@@ -23,7 +23,6 @@ class ProtoClassifier(nn.Module):
             nn.ReLU(),
             nn.Linear(self.hidden_size, self.proto_count),
         )
-        self.protos = nn.Parameter(torch.random.randn((self.proto_count, self.output_dim)), requires_grad=False)
         
     def forward(self, x):
         x = self.net(x)

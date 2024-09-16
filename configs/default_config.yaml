@@ -1,10 +1,10 @@
 batch_size: 32
 learning_rate: 0.001
 epochs: 100
-optimizer: 'adam'
-loss_fn: 'mse_loss'
-input_dim: 10
-output_dim: 10
-proto_count: [50,50]
+optimizer: 'Adam'
+loss_fn: 'MSELoss'
+input_dim: 1
+output_dim: 2
+proto_count_per_dim: 50
 log_dir: './logs'
-dataset: 'UnconditionalSynthData'
+dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'

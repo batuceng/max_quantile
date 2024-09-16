@@ -4,18 +4,18 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from models.model import ProtoClassifier
-from data import dataset as custom_datasets
+from data.dataset import CustomDataset
 from scripts.utils import prepare_training
 import os
 
 def train(config):
     # Load dataset
     # dataset = CustomDataset()
-    dataset = getattr(custom_datasets, config['dataset'])()
+    dataset = CustomDataset(config['dataset_path'])
     data_loader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=True)
 
     # Initialize model, loss function, and optimizer
-    model = ProtoClassifier(config['input_dim'], config['output_dim'])
+    model = ProtoClassifier(config['input_dim'], config['output_dim'], config['proto_count_per_dim'])
     criterion = getattr(nn, config['loss_fn'])()
     optimizer = getattr(optim, config['optimizer'])(model.parameters(), lr=config['learning_rate'])
 
