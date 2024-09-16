@@ -5,6 +5,6 @@ optimizer: 'adam'
 loss_fn: 'mse_loss'
 input_dim: 10
 output_dim: 10
-proto_count: 10
+proto_count: [50,50]
 log_dir: './logs'
-dataset: 'CustomDataset'
+dataset: 'UnconditionalSynthData'
