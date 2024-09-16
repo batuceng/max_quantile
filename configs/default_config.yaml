@@ -2,7 +2,7 @@ batch_size: 32
 learning_rate: 0.001
 epochs: 100
 optimizer: 'Adam'
-loss_fn: 'MSELoss'
+loss_fn: 'CELoss'
 input_dim: 1
 output_dim: 2
 proto_count_per_dim: 50
