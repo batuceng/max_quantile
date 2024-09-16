@@ -1,0 +1,10 @@
+batch_size: 32
+learning_rate: 0.001
+epochs: 100
+optimizer: 'adam'
+loss_fn: 'mse_loss'
+input_dim: 10
+output_dim: 10
+proto_count: 10
+log_dir: './logs'
+dataset: 'CustomDataset'
