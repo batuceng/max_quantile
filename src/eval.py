@@ -2,7 +2,7 @@ import torch
 from models.model import RegressionModel
 from data.dataset import CustomDataset
 from torch.utils.data import DataLoader
-from scripts.utils import load_config
+from src.utils import load_config
 
 def evaluate():
     config = load_config('./configs/default_config.yaml')

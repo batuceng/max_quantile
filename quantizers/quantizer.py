@@ -25,7 +25,7 @@ class GridQuantizer(nn.Module):
         grid = np.meshgrid(*grids)  # This creates a grid for each dimension
         protos_numpy = np.vstack([g.ravel() for g in grid]).T  # (k^d, d), where k varies per dimension based on proto_count_per_dim
         
-        self.protos = torch.tensor(protos_numpy, dtype=torch.float32, requires_grad=False)
+        self.protos = nn.Parameter(torch.tensor(protos_numpy, dtype=torch.float32), requires_grad=False)
         
     def quantize(self, x):
         if isinstance(x, np.ndarray):
@@ -70,7 +70,7 @@ class VoronoiQuantizer(GridQuantizer):
     # Return area of each proto
     def get_areas(self):
         outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
-        return get_voronoi_areas(self.protos, outer_point_list)
+        return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
     
  
 def QuadTree():

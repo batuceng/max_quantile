@@ -1,5 +1,5 @@
 batch_size: -1
-learning_rate: 0.001
+learning_rate: 0.0003
 epochs: 100
 optimizer: 'Adam'
 loss_fn: 'CrossEntropyLoss'
