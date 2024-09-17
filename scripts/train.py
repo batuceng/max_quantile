@@ -6,6 +6,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from models.model import ProtoClassifier
 from data.dataset import CustomDataset
@@ -14,11 +15,11 @@ from quantizers.quantizer import VoronoiQuantizer
 
 def train(config):
     # Load dataset
-    # dataset = CustomDataset()
     dataset = CustomDataset(config['dataset_path'])
-    data_loader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=True)
+    bs = config['batch_size'] if config['batch_size']!=-1 else dataset.__len__()
+    data_loader = DataLoader(dataset, batch_size=bs, shuffle=True)
     
-    device = torch.device('cpu')
+    device = torch.device('cuda')
 
     # Initialize model, loss function, and optimizer
     model = ProtoClassifier(config['input_dim'], config['output_dim'], config['proto_count_per_dim']).to(device)
@@ -34,17 +35,25 @@ def train(config):
         model.train()
         running_loss = 0.0
         protos = quantizer.get_protos().to(device)
-        for i, (inputs, targets) in enumerate(data_loader):
+
+        # Wrap data_loader with tqdm for batch-level progress
+        for i, (inputs, targets) in enumerate(tqdm(data_loader, desc=f"Epoch {epoch+1}/{config['epochs']}")):
             inputs, targets = inputs.to(device), targets.to(device)
-            quantized_targets = quantizer.quantize(targets).to(device)
+            protos = quantizer.get_protos()
+            proto_areas = torch.tensor(quantizer.get_areas()).to(device)
+            
+            qdist, quantized_targets = quantizer.quantize(targets)
+            
             optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, quantized_targets)
+            log_density_preds = model(inputs)
+            log_prob_preds = log_density_preds + proto_areas
+            loss = criterion(log_prob_preds, quantized_targets)
+            
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
 
+        # Logging to TensorBoard
         writer.add_scalar('Loss/train', running_loss / len(data_loader), epoch)
 
     writer.close()
-

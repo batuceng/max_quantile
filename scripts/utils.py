@@ -50,6 +50,7 @@ def update_config_with_args(config, args):
 def prepare_training():
     """Prepare the training configuration by loading the config file and parsing CLI arguments."""
     args = parse_arguments()  # Step 1: Parse command-line arguments
+    print(os.getcwd())
     config = load_config(args.config)  # Step 2: Load the YAML configuration file
     config = update_config_with_args(config, args)  # Step 3: Override config with CLI arguments
     return config
