@@ -31,6 +31,8 @@ class ProtoClassifier(nn.Module):
         return x
     
     # Delete the prototypes in the given indices
+    # indices : (0,3,5)
+    # new_indices = 1=: 0 , 2=: 1 , 4=: 2
     def remove_proto(self, indices):
         mask = np.full(len(self.head.weight),True,dtype=bool)
         mask[indices] = False

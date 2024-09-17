@@ -45,34 +45,30 @@ class GridQuantizer(nn.Module):
 class VoronoiQuantizer(GridQuantizer):
     def __init__(self, y_vals, proto_count_per_dim):
         super(VoronoiQuantizer, self).__init__(y_vals, proto_count_per_dim)
+        self.protos.requires_grad = True
         
     def quantize(self, x):
         return super(VoronoiQuantizer, self).quantize(x)
 
     # Delete the prototypes in the given indices
+    @torch.no_grad()
     def remove_proto(self, indices):
         mask = np.full(len(self.protos),True,dtype=bool)
         mask[indices] = False
         self.protos = self.protos[mask]
 
     # Repeat the prototypes in the given indices and concat to the end
+    @torch.no_grad()
     def add_proto(self, indices):
         mask = np.full(len(self.protos),False,dtype=bool)
         mask[indices] = True
         self.protos = torch.vstack(self.protos, self.protos[mask])
-
-    def get_protos(self):
-        return self.protos
-
-    def set_protos(self, protos):
-        self.protos = protos
-    
     # Return area of each proto
     def get_areas(self):
         outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
         return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
     
- 
+    
 def QuadTree():
     def __init__():
         pass

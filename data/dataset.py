@@ -7,6 +7,13 @@ class CustomDataset(Dataset):
         assert mode in ['train', 'test', 'cal']
         all_data = np.load(data_path, allow_pickle=True).item()
         self.mode = mode
+        
+        if transform is None and mode == 'train':
+            self.mean = np.mean(all_data['train_x'], axis=0)
+            self.std = np.std(all_data['train_x'], axis=0)
+            self.std[self.std == 0] = 1
+            transform = lambda x: (x - self.mean) / self.std
+        
         self.transform = transform
 
         if self.mode == 'train':
@@ -26,6 +33,10 @@ class CustomDataset(Dataset):
         x, y = self.data_x[idx], self.data_y[idx]
         
         if self.transform:
-            x = self.transform(x)
+            x = self.do_transform(x)
         
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
+    
+    
+    def do_transform(self, x):
+        return self.transform(x)

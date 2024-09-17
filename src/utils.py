@@ -39,11 +39,11 @@ def parse_arguments():
 def update_config_with_args(config, args):
     """Update the config with the values provided by command-line arguments."""
     if args.learning_rate is not None:
-        config['learning_rate'] = args.learning_rate
+        config['train']['learning_rate'] = args.learning_rate
     if args.epochs is not None:
-        config['epochs'] = args.epochs
+        config['train']['epochs'] = args.epochs
     if args.batch_size is not None:
-        config['batch_size'] = args.batch_size
+        config['train']['batch_size'] = args.batch_size
     config['run_id'] = args.run_id
     return config
 

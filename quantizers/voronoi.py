@@ -3,13 +3,18 @@ import matplotlib.pyplot as plt
 from scipy.spatial import Voronoi
 from matplotlib.patches import Polygon as MplPolygon
 from shapely.geometry import Polygon as ShapelyPolygon
-
+import torch 
 def get_voronoi_areas(points, boundaries):
     dims = points.shape[1]
-    if dims==2:
+    if dims==1:
+        return boundary_clipped_voronoi_areas_1d(points, boundaries)
+    elif dims==2:
         return boundary_clipped_voronoi_areas_2d(points, boundaries)
     else:
         raise NotImplementedError(f"get_voronoi_areas is not implemented for d:{dims}")
+
+
+#!todo implement for other dimensions first for 1d
 
 def boundary_clipped_voronoi_areas_2d(points, boundaries):
     vor = Voronoi(points)
@@ -90,3 +95,35 @@ def voronoi_finite_polygons_2d(vor, radius=None):
             new_regions.append(new_region.tolist())
 
         return new_regions, np.array(new_vertices)
+    
+    
+
+def boundary_clipped_voronoi_areas_1d(points, boundaries):
+    points, indices = torch.sort(points)
+    a, b = boundaries
+    n = len(points)
+    device = points.device
+
+    # Calculate midpoints between sorted points
+    midpoints = (points[:-1] + points[1:]) / 2  # Shape: [n - 1]
+
+    # Initialize left and right boundaries for each Voronoi cell
+    left = torch.empty(n, device=device)
+    right = torch.empty(n, device=device)
+
+    # Set left boundaries
+    left[0] = a
+    left[1:] = midpoints  # Left boundaries for points 1 to n-1
+
+    # Set right boundaries
+    right[:-1] = midpoints  # Right boundaries for points 0 to n-2
+    right[-1] = b
+
+    # Clip left and right boundaries to the overall boundaries [a, b]
+    left_clipped = torch.clamp(left, min=a)
+    right_clipped = torch.clamp(right, max=b)
+
+    # Calculate the lengths of the Voronoi cells
+    lengths = torch.clamp(right_clipped - left_clipped, min=0)
+
+    return lengths
