@@ -34,14 +34,27 @@ class GridQuantizer(nn.Module):
         mindist, pos = torch.min(cdist_list, dim=1)
         return mindist, pos  # Return the index of nearest prototype
 
+    # def get_data_boundary_box(self, mins, maxs):
+    #     # Create a list of tuples with min and max for each dimension
+    #     bounds = [(mins[i], maxs[i]) for i in range(len(mins))]
+        
+    #     # Generate all possible combinations of mins and maxs (2^d corner points)
+    #     corner_points = np.array(list(product(*bounds)))
+    #     return ConvexHull(corner_points)
+    
     def get_data_boundary_box(self, mins, maxs):
-        # Create a list of tuples with min and max for each dimension
-        bounds = [(mins[i], maxs[i]) for i in range(len(mins))]
-        
-        # Generate all possible combinations of mins and maxs (2^d corner points)
-        corner_points = np.array(list(product(*bounds)))
-        
-        return ConvexHull(corner_points)
+        if len(mins) == 1:
+            # 1D case: Return the boundary as a tuple (min, max)
+            return (mins[0], maxs[0])
+        elif len(mins) == 2:
+            # 2D case: Use ConvexHull to get the boundary
+            bounds = [(mins[i], maxs[i]) for i in range(len(mins))]
+            # Generate all possible combinations of mins and maxs (2^d corner points)
+            corner_points = np.array(list(product(*bounds)))
+            return ConvexHull(corner_points)
+        else:
+            raise ValueError("Unsupported dimensionality for get_data_boundary_box")
+    
 class VoronoiQuantizer(GridQuantizer):
     def __init__(self, y_vals, proto_count_per_dim):
         super(VoronoiQuantizer, self).__init__(y_vals, proto_count_per_dim)
@@ -65,7 +78,10 @@ class VoronoiQuantizer(GridQuantizer):
         self.protos = torch.vstack(self.protos, self.protos[mask])
     # Return area of each proto
     def get_areas(self):
-        outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
+        if hasattr(self.outer_hull,"points"):
+            outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
+        else:
+            outer_point_list = torch.tensor(self.outer_hull)
         return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
     
     

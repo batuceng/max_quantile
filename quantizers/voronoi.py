@@ -99,17 +99,17 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     
 
 def boundary_clipped_voronoi_areas_1d(points, boundaries):
-    points, indices = torch.sort(points)
+    # Ensure points is a 1D array
+    points = np.sort(points.flatten())
     a, b = boundaries
     n = len(points)
-    device = points.device
 
     # Calculate midpoints between sorted points
-    midpoints = (points[:-1] + points[1:]) / 2  # Shape: [n - 1]
+    midpoints = (points[:-1] + points[1:]) / 2  # Shape: (n - 1,)
 
     # Initialize left and right boundaries for each Voronoi cell
-    left = torch.empty(n, device=device)
-    right = torch.empty(n, device=device)
+    left = np.empty(n)
+    right = np.empty(n)
 
     # Set left boundaries
     left[0] = a
@@ -120,10 +120,10 @@ def boundary_clipped_voronoi_areas_1d(points, boundaries):
     right[-1] = b
 
     # Clip left and right boundaries to the overall boundaries [a, b]
-    left_clipped = torch.clamp(left, min=a)
-    right_clipped = torch.clamp(right, max=b)
+    left_clipped = np.clip(left, a, b)
+    right_clipped = np.clip(right, a, b)
 
     # Calculate the lengths of the Voronoi cells
-    lengths = torch.clamp(right_clipped - left_clipped, min=0)
+    lengths = np.maximum(right_clipped - left_clipped, 0)
 
     return lengths

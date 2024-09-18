@@ -94,8 +94,8 @@ def unconditional_2d_data_generator():
 def prepare_concrete_dataset():
   concrete_compressive_strength = fetch_ucirepo(id=165) 
   # data (as pandas dataframes) 
-  X = concrete_compressive_strength.data.features 
-  y = concrete_compressive_strength.data.targets 
+  X = concrete_compressive_strength.data.features.values
+  y = concrete_compressive_strength.data.targets.values
   
   # split the data
   from sklearn.model_selection import train_test_split
@@ -117,4 +117,6 @@ def prepare_concrete_dataset():
 
 
 
+# %%
+prepare_concrete_dataset()
 # %%

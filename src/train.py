@@ -17,6 +17,8 @@ from src.utils import prepare_training
 from quantizers.quantizer import VoronoiQuantizer
 from src.eval import eval_model
 from src.losses import mindist_loss, repulsion_loss, softmin_grads
+import time 
+import yaml
 
 def train(config):
     # Load dataset
@@ -31,16 +33,26 @@ def train(config):
 
     cross_entropy_loss = nn.CrossEntropyLoss()
     
-    optimizer = getattr(optim, config['train']['optimizer'])(model.parameters(), lr=config['train']['learning_rate'])
-    if config['quantizer']['type'] == 'voronoi':
-        quantizer = VoronoiQuantizer(train_dataset.data_y, config['model']['proto_count_per_dim']).to(device)
-    elif config['quantizer']['type'] == 'grid':
+    if config['quantizer']['quantizer_type'] == 'voronoi':
+        quantizer = VoronoiQuantizer(train_dataset.transform_y(train_dataset.data_y), config['model']['proto_count_per_dim']).to(device)
+    elif config['quantizer']['quantizer_type'] == 'grid':
         pass
     else:
-        raise NotImplementedError(f"Quantizer type {config['quantizer']['type']} not implemented.")
-    # TensorBoard writer
-    writer = SummaryWriter(log_dir=os.path.join(config['log_dir'], 'run_{}'.format(config['run_id'])))
+        raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
+    
+    optimizer = getattr(optim, config['train']['optimizer'])(list(model.parameters()) + list(quantizer.parameters()) , lr=config['train']['learning_rate'])
+    # it should contain be under the dataset folder and inside the dataset folder it should have the time folder 
+    time_str = time.strftime("%Y%m%d-%H%M%S")
+    experiement_path = os.path.join(config['log_dir'],config['dataset_path'].split('/')[-2],time_str)
+    os.makedirs(experiement_path,exist_ok=True)
+    
+    writer = SummaryWriter(log_dir=experiement_path)
+    # Save config
+    yaml_path = os.path.join(experiement_path,'config.yaml')
+    with open(yaml_path, 'w') as file:
+        yaml.dump(config, file)
 
+    
     # Training loop
     for epoch in range(config['train']['epochs']):
         model.train()
@@ -58,11 +70,29 @@ def train(config):
             repulsion = repulsion_loss(quantizer.protos,margin = config["losses"]["repulsion_loss_margin"])
             loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight']
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(quantizer.parameters(),0.2)
             optimizer.step()
             running_loss += loss.item()
         # Logging to TensorBoard
         writer.add_scalar('Loss/train', running_loss / len(train_data_loader), epoch)
 
-    eval_model(config, model, train_dataset.transform, quantizer)
+    
+    covarage_01,pinaw_01 = eval_model(config, model, train_dataset.transform_x,train_dataset.transform_y, quantizer,alpha=0.1,folder=experiement_path)
+    covarage_05,pinaw_05 = eval_model(config, model, train_dataset.transform_x,train_dataset.transform_y, quantizer,alpha=0.5,folder=experiement_path)
+    covarage_09,pinaw_09 = eval_model(config, model, train_dataset.transform_x,train_dataset.transform_y, quantizer,alpha=0.9,folder=experiement_path)
+    writer.add_scalar('Coverage/0.1', covarage_01, epoch)
+    writer.add_scalar('PINAW/0.1', pinaw_01, epoch)
+    writer.add_scalar('Coverage/0.5', covarage_05, epoch)
+    writer.add_scalar('PINAW/0.5', pinaw_05, epoch)
+    writer.add_scalar('Coverage/0.9', covarage_09, epoch)
+    writer.add_scalar('PINAW/0.9', pinaw_09, epoch)
+    
+    # Save model
+    model_path = os.path.join(experiement_path,'model.pth')
+    torch.save(model.state_dict(), model_path)
+    # save quantizer
+    quantizer_path = os.path.join(experiement_path,'quantizer.pth')
+    torch.save(quantizer.state_dict(), quantizer_path)
+    
     
     writer.close()

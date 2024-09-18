@@ -1,7 +1,7 @@
 train:
   batch_size: -1
   learning_rate: 0.0003
-  epochs: 100
+  epochs: 1000
   optimizer: 'Adam'
 
 losses:
@@ -17,8 +17,8 @@ losses:
   use_softmin_grads : False
 
 model:
-  input_dim: 1
-  output_dim: 2
+  input_dim: 8
+  output_dim: 1
   proto_count_per_dim: 50
 
 quantizer:
@@ -26,4 +26,4 @@ quantizer:
   
 
 log_dir: './logs'
-dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'
+dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
