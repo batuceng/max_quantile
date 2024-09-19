@@ -2,25 +2,20 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 
+import joblib
+import os
+
 class CustomDataset(Dataset):
-    def __init__(self, data_path, mode='train', transform_x=None,transform_y=None):
+    def __init__(self, data_path, mode='train'):
+        '''
+        Data is read from a numpy file. The values are already normalized.
+        '''
         assert mode in ['train', 'test', 'cal']
         all_data = np.load(data_path, allow_pickle=True).item()
-        self.mode = mode
-        
-        if transform_x is None and mode == 'train':
-            self.mean = np.mean(all_data['train_x'], axis=0)
-            self.std = np.std(all_data['train_x'], axis=0)
-            self.std[self.std == 0] = 1
-            transform_x = lambda x: (x - self.mean) / self.std
-        self.transform_x = transform_x
-        
-        if transform_y is None and mode == 'train':
-            self.mean_y = np.mean(all_data['train_y'], axis=0)
-            self.std_y = np.std(all_data['train_y'], axis=0)
-            self.std_y[self.std_y == 0] = 1
-            transform_y = lambda x: (x - self.mean_y) / self.std_y
-        self.transform_y = transform_y
+        self.data_path = data_path
+        self.mode = mode        
+        self.scaler_x = joblib.load(os.path.join(os.path.dirname(self.data_path), 'scaler_x.pkl'))
+        self.scaler_y = joblib.load(os.path.join(os.path.dirname(self.data_path), 'scaler_y.pkl'))
         
         if self.mode == 'train':
             self.data_x = all_data['train_x']
@@ -35,13 +30,13 @@ class CustomDataset(Dataset):
     def __len__(self):
         return len(self.data_x)
 
+    def get_real_values(self):
+        '''
+        Denormalize the data and return the real values.
+        '''
+        return self.scaler_x.inverse_transform(self.data_x), self.scaler_y.inverse_transform(self.data_y)
+    
     def __getitem__(self, idx):
         x, y = self.data_x[idx], self.data_y[idx]
-        
-        if self.transform_x:
-            x = self.transform_x(x)
-        if self.transform_y:
-            y = self.transform_y(y)
-        
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
   

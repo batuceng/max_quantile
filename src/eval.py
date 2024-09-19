@@ -6,14 +6,14 @@ import numpy as np
 from src.utils import load_config
 import torch.nn.functional as F
 
-def eval_model(config, model, train_transform_x,train_transform_y, quantizer, folder, alpha=0.9,):
+def eval_model(config, model, quantizer, folder, alpha=0.9,):
     # Load calibration dataset and data loader
-    calib_dataset = CustomDataset(config['dataset_path'], mode='cal', transform_x=train_transform_x,transform_y=train_transform_y)
+    calib_dataset = CustomDataset(config['dataset_path'], mode='cal')
     bs = config['train']['batch_size'] if config['train']['batch_size'] != -1 else len(calib_dataset)
     calib_data_loader = DataLoader(calib_dataset, batch_size=bs, shuffle=False)
 
     # Load test dataset and data loader
-    test_dataset = CustomDataset(config['dataset_path'], mode='test', transform_x=train_transform_x,transform_y=train_transform_y)
+    test_dataset = CustomDataset(config['dataset_path'], mode='test')
     bs = config['train']['batch_size'] if config['train']['batch_size'] != -1 else len(test_dataset)
     test_data_loader = DataLoader(test_dataset, batch_size=bs, shuffle=False)
 
