@@ -77,6 +77,112 @@ class VoronoiQuantizer(GridQuantizer):
         self.protos = torch.vstack(self.protos, self.protos[mask])
     
     
-def QuadTree():
-    def __init__():
-        pass
+#%%
+import numpy as np
+from itertools import product
+
+class QuadTreeNode:
+    def __init__(self, center, length):
+        """
+        Initialize a quadtree node in d dimensions.
+        
+        Parameters:
+        - center: A list or numpy array of the coordinates of the center of the node in d dimensions.
+        - length: A list or numpy array representing the length of the node along each dimension.
+        """
+        self.center = np.array(center)  # Center of the node
+        self.length = np.array(length)  # Length along each dimension
+        self.is_leaf = True             # Indicates whether the node is a leaf or subdivided
+        self.children = []              # Holds children when the node is subdivided
+
+    def split(self):
+        """Subdivide the node into 2^d smaller nodes."""
+        d = len(self.center)  # Number of dimensions
+        half_length = self.length / 2
+        
+        # Generate all possible combinations of half-length offsets (-half_length, +half_length) along each dimension
+        offsets = list(product(*[[-hl, hl] for hl in half_length]))
+        
+        # Create child nodes at the new centers
+        for offset in offsets:
+            new_center = self.center + np.array(offset)
+            self.children.append(QuadTreeNode(new_center, half_length))
+        
+        self.is_leaf = False
+
+    def merge(self):
+        """Merge the node back into a single node, removing all children."""
+        self.children = []
+        self.is_leaf = True
+
+    def size(self):
+        """Compute the size of the node (length, area, volume, etc.)."""
+        return np.prod(self.length)
+
+class QuadTree:
+    def __init__(self, center, length, max_depth):
+        """
+        Initialize the quadtree for d dimensions.
+        
+        Parameters:
+        - center: A list or numpy array of the center of the root node.
+        - length: A list or numpy array of the length along each dimension.
+        - max_depth: The maximum depth the tree is allowed to reach.
+        """
+        self.root = QuadTreeNode(center, length)
+        self.max_depth = max_depth
+
+    def split_node(self, node, current_depth):
+        """Recursively split a node if the max depth hasn't been reached."""
+        if current_depth < self.max_depth and node.is_leaf:
+            node.split()
+            for child in node.children:
+                self.split_node(child, current_depth + 1)
+
+    def merge_node(self, node):
+        """Recursively merge a node and its children."""
+        if not node.is_leaf:
+            for child in node.children:
+                self.merge_node(child)
+            node.merge()
+
+    def get_leaf_nodes(self, node=None):
+        """Recursively retrieve all leaf nodes."""
+        if node is None:
+            node = self.root
+        
+        if node.is_leaf:
+            return [node]
+        else:
+            leaf_nodes = []
+            for child in node.children:
+                leaf_nodes.extend(self.get_leaf_nodes(child))
+            return leaf_nodes
+
+    def print_leaf_nodes(self):
+        """Print details about all leaf nodes."""
+        leaf_nodes = self.get_leaf_nodes()
+        for i, node in enumerate(leaf_nodes):
+            print(f"Leaf {i}: Center = {node.center}, Lengths = {node.length}, Size = {node.size()}")
+
+# Example usage
+if __name__ == "__main__":
+    # Create a 2D quadtree with a center at (0, 0) and length (1, 1) along each dimension
+    center = [0, 0]  # 2D center
+    length = [1, 1]  # 2D length (size of space along x and y)
+    max_depth = 3     # Maximum depth of the tree
+
+    # Initialize the quadtree
+    qt = QuadTree(center, length, max_depth)
+
+    # Split the root node recursively until max depth is reached
+    qt.split_node(qt.root, 0)
+
+    # Print all leaf nodes
+    qt.print_leaf_nodes()
+
+    # Merge all nodes back into a single node
+    qt.merge_node(qt.root)
+
+    print("After merging:")
+    qt.print_leaf_nodes()
