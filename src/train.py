@@ -14,7 +14,7 @@ from tqdm import tqdm
 from models.model import ProtoClassifier
 from data.dataset import CustomDataset
 from src.utils import prepare_training
-from quantizers.quantizer import VoronoiQuantizer
+from quantizers.quantizer import VoronoiQuantizer,GridQuantizer
 from src.eval import eval_model
 from src.losses import mindist_loss, repulsion_loss, softmin_grads
 import time 
@@ -36,7 +36,7 @@ def train(config):
     if config['quantizer']['quantizer_type'] == 'voronoi':
         quantizer = VoronoiQuantizer(train_dataset.transform_y(train_dataset.data_y), config['model']['proto_count_per_dim']).to(device)
     elif config['quantizer']['quantizer_type'] == 'grid':
-        pass
+        quantizer = GridQuantizer(train_dataset.transform_y(train_dataset.data_y), config['model']['proto_count_per_dim']).to(device)
     else:
         raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
     
@@ -60,6 +60,7 @@ def train(config):
         running_CE_loss = 0.0
         running_MinDist_loss = 0.0
         running_Repulsion_loss = 0.0
+        
         # Wrap train_data_loader with tqdm for batch-level progress
         for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}")):
             inputs, targets = inputs.to(device), targets.to(device)
@@ -74,7 +75,7 @@ def train(config):
             loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight']
             
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(quantizer.parameters(),0.2)
+            torch.nn.utils.clip_grad_norm_(quantizer.parameters(),0.1)
             optimizer.step()
             
             running_total_loss += loss.item()
@@ -82,11 +83,22 @@ def train(config):
             running_MinDist_loss += mindist.item()
             running_Repulsion_loss += repulsion.item()
             
+        
+        mean_proto_area = torch.mean(torch.tensor(quantizer.get_areas())).item()
+        std_proto_area = torch.std(torch.tensor(quantizer.get_areas())).item()
+        min_proto_area = torch.min(torch.tensor(quantizer.get_areas())).item()
+        max_proto_area = torch.max(torch.tensor(quantizer.get_areas())).item()
         # Logging to TensorBoard
         writer.add_scalar('Loss/train/total', running_total_loss / len(train_data_loader), epoch)
         writer.add_scalar('Loss/train/CE', running_CE_loss / len(train_data_loader), epoch)
         writer.add_scalar('Loss/train/mindist', running_MinDist_loss / len(train_data_loader), epoch)
         writer.add_scalar('Loss/train/repulsion', running_Repulsion_loss / len(train_data_loader), epoch)
+
+        writer.add_scalar('ProtoArea/mean', mean_proto_area, epoch)
+        writer.add_scalar('ProtoArea/std', std_proto_area, epoch)
+        writer.add_scalar('ProtoArea/min', min_proto_area, epoch)
+        writer.add_scalar('ProtoArea/max', max_proto_area, epoch)
+        
         writer.add_scalars(
             'Percentage/train', 
             {
