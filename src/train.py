@@ -43,7 +43,7 @@ def train(config):
     optimizer = getattr(optim, config['train']['optimizer'])(list(model.parameters()) + list(quantizer.parameters()) , lr=config['train']['learning_rate'])
     # it should contain be under the dataset folder and inside the dataset folder it should have the time folder 
     time_str = time.strftime("%Y%m%d-%H%M%S")
-    experiement_path = os.path.join(config['log_dir'],config['dataset_path'].split('/')[-2],time_str)
+    experiement_path = os.path.join(config['log_dir'],config['dataset_path'].split('/')[-2],config['quantizer']['quantizer_type'],time_str)
     os.makedirs(experiement_path,exist_ok=True)
     
     writer = SummaryWriter(log_dir=experiement_path)

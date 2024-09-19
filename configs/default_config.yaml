@@ -27,3 +27,4 @@ quantizer:
 
 log_dir: './logs'
 dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
+seed: 42

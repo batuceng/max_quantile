@@ -30,3 +30,4 @@ quantizer:
 log_dir: './logs'
 # dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
 dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'
+seed: 42
