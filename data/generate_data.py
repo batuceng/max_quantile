@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 import os
 from ucimlrepo import fetch_ucirepo 
+from sklearn.preprocessing import StandardScaler
+import joblib
+
 
 np.random.seed(0)
 
@@ -59,6 +62,19 @@ def unconditional_2d_data_generator():
   train_x, test_x, train_y, test_y = train_test_split(np.zeros((len(data_samples),1)), data_samples, test_size=0.2, random_state=1)
   test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=1)
 
+
+  scaler_x = StandardScaler()
+  scaler_y = StandardScaler()
+  train_x = scaler_x.fit_transform(train_x)
+  train_y = scaler_y.fit_transform(train_y)
+  test_x = scaler_x.transform(test_x)
+  test_y = scaler_y.transform(test_y)
+  cal_x = scaler_x.transform(cal_x)
+  cal_y = scaler_y.transform(cal_y)
+  
+  joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
+  joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
+
   all_data = {
     'train_x': train_x,
     'train_y': train_y,
@@ -101,7 +117,16 @@ def prepare_concrete_dataset():
   from sklearn.model_selection import train_test_split
   train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=1)
   test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=1)
-    
+  
+  scaler_x = StandardScaler()
+  scaler_y = StandardScaler()
+  train_x = scaler_x.fit_transform(train_x)
+  train_y = scaler_y.fit_transform(train_y)
+  test_x = scaler_x.transform(test_x)
+  test_y = scaler_y.transform(test_y)
+  cal_x = scaler_x.transform(cal_x)
+  cal_y = scaler_y.transform(cal_y)
+  
   all_data = {
     'train_x': train_x,
     'train_y': train_y,
@@ -112,6 +137,9 @@ def prepare_concrete_dataset():
   }
   savedir = './raw/Concrete_Compressive_Strength'
   os.makedirs(savedir, exist_ok=True)
+  joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
+  joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
+  
   np.save(os.path.join(savedir, 'all_data.npy'), all_data)
   
 
@@ -119,4 +147,5 @@ def prepare_concrete_dataset():
 
 # %%
 prepare_concrete_dataset()
+unconditional_2d_data_generator()
 # %%

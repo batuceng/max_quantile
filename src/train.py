@@ -34,9 +34,9 @@ def train(config):
     cross_entropy_loss = nn.CrossEntropyLoss()
     
     if config['quantizer']['quantizer_type'] == 'voronoi':
-        quantizer = VoronoiQuantizer(train_dataset.transform_y(train_dataset.data_y), config['model']['proto_count_per_dim']).to(device)
+        quantizer = VoronoiQuantizer(train_dataset.data_y, config['model']['proto_count_per_dim']).to(device)
     elif config['quantizer']['quantizer_type'] == 'grid':
-        quantizer = GridQuantizer(train_dataset.transform_y(train_dataset.data_y), config['model']['proto_count_per_dim']).to(device)
+        quantizer = GridQuantizer(train_dataset.data_y, config['model']['proto_count_per_dim']).to(device)
     else:
         raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
     
@@ -109,9 +109,9 @@ def train(config):
             epoch)
 
     
-    covarage_01,pinaw_01 = eval_model(config, model, train_dataset.transform_x,train_dataset.transform_y, quantizer,alpha=0.1,folder=experiement_path)
-    covarage_05,pinaw_05 = eval_model(config, model, train_dataset.transform_x,train_dataset.transform_y, quantizer,alpha=0.5,folder=experiement_path)
-    covarage_09,pinaw_09 = eval_model(config, model, train_dataset.transform_x,train_dataset.transform_y, quantizer,alpha=0.9,folder=experiement_path)
+    covarage_01,pinaw_01 = eval_model(config, model,quantizer,alpha=0.1,folder=experiement_path)
+    covarage_05,pinaw_05 = eval_model(config, model,quantizer,alpha=0.5,folder=experiement_path)
+    covarage_09,pinaw_09 = eval_model(config, model,quantizer,alpha=0.9,folder=experiement_path)
     writer.add_scalar('Coverage/0.1', covarage_01, epoch)
     writer.add_scalar('PINAW/0.1', pinaw_01, epoch)
     writer.add_scalar('Coverage/0.5', covarage_05, epoch)
