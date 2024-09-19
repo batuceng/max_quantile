@@ -56,7 +56,10 @@ def train(config):
     # Training loop
     for epoch in range(config['train']['epochs']):
         model.train()
-        running_loss = 0.0
+        running_total_loss = 0.0
+        running_CE_loss = 0.0
+        running_MinDist_loss = 0.0
+        running_Repulsion_loss = 0.0
         # Wrap train_data_loader with tqdm for batch-level progress
         for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}")):
             inputs, targets = inputs.to(device), targets.to(device)
@@ -69,12 +72,29 @@ def train(config):
             mindist = mindist_loss(targets, quantizer.protos)
             repulsion = repulsion_loss(quantizer.protos,margin = config["losses"]["repulsion_loss_margin"])
             loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight']
+            
             loss.backward()
             torch.nn.utils.clip_grad_norm_(quantizer.parameters(),0.2)
             optimizer.step()
-            running_loss += loss.item()
+            
+            running_total_loss += loss.item()
+            running_CE_loss += ce_loss.item()
+            running_MinDist_loss += mindist.item()
+            running_Repulsion_loss += repulsion.item()
+            
         # Logging to TensorBoard
-        writer.add_scalar('Loss/train', running_loss / len(train_data_loader), epoch)
+        writer.add_scalar('Loss/train/total', running_total_loss / len(train_data_loader), epoch)
+        writer.add_scalar('Loss/train/CE', running_CE_loss / len(train_data_loader), epoch)
+        writer.add_scalar('Loss/train/mindist', running_MinDist_loss / len(train_data_loader), epoch)
+        writer.add_scalar('Loss/train/repulsion', running_Repulsion_loss / len(train_data_loader), epoch)
+        writer.add_scalars(
+            'Percentage/train', 
+            {
+            'CE_percent': (running_CE_loss * config['losses']['cross_entropy_weight']) / (running_total_loss)*100,
+            'MinDist_percent': (running_MinDist_loss * config['losses']['mindist_weight']) / (running_total_loss)*100,
+            'Repulsion_percent': (running_Repulsion_loss * config['losses']['repulsion_loss_weight']) / (running_total_loss)*100,
+            },
+            epoch)
 
     
     covarage_01,pinaw_01 = eval_model(config, model, train_dataset.transform_x,train_dataset.transform_y, quantizer,alpha=0.1,folder=experiement_path)
