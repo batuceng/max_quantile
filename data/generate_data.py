@@ -150,7 +150,7 @@ if __name__ == '__main__':
   
   prepare_any_dataset(165,'Concrete_Compressive_Strength')
   prepare_any_dataset(174,'Parkinsons')
-  prepare_any_dataset(186,'Wine Quality')
+  prepare_any_dataset(186,'White_Wine')
 
 
 
