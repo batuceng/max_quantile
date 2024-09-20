@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from itertools import product
 
 from .voronoi import get_voronoi_areas
@@ -17,7 +18,7 @@ class GridQuantizer(nn.Module):
         self.mins = self.mins - 0.1 * length
         self.maxs = self.maxs + 0.1 * length
         
-        self.outer_hull = self.get_data_boundary_box(self.mins, self.maxs)
+        self.outer_hull = self.get_data_boundary_box()
         d = y_vals.shape[1]  # Number of dimensions
         self.dims = d
 
@@ -40,7 +41,17 @@ class GridQuantizer(nn.Module):
         mindist, pos = torch.min(cdist_list, dim=1)
         return mindist, pos  # Return the index of nearest prototype
 
-    def get_data_boundary_box(self, mins, maxs):
+    # @torch.no_grad()
+    def soft_quantize(self, x, temp):
+        if isinstance(x, np.ndarray):
+            x = torch.tensor(x, dtype=torch.float32)
+        cdist_list = torch.cdist(x, self.protos, p=2)
+        soft_pos = F.softmin(cdist_list/temp, dim=1)
+        return soft_pos  # Return the index of nearest prototype
+
+
+    def get_data_boundary_box(self):
+        mins, maxs = self.mins, self.maxs
         if len(mins) == 1:
             # 1D case: Return the boundary as a tuple (min, max)
             return (mins[0], maxs[0])
@@ -60,10 +71,9 @@ class GridQuantizer(nn.Module):
             outer_point_list = torch.tensor(self.outer_hull)
         return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
     
-    
+    @torch.no_grad()    
     def clamp_protos(self):
-        with torch.no_grad():
-            self.protos.clamp_(min=torch.from_numpy(self.mins).to(self.protos.device), max=torch.from_numpy(self.maxs).to(self.protos.device))
+        self.protos.clamp_(min=torch.from_numpy(self.mins).to(self.protos.device), max=torch.from_numpy(self.maxs).to(self.protos.device))
     
 class VoronoiQuantizer(GridQuantizer):
     def __init__(self, y_vals, proto_count_per_dim):
