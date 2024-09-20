@@ -16,7 +16,7 @@ from data.dataset import CustomDataset
 from src.utils import prepare_training
 from quantizers.quantizer import VoronoiQuantizer,GridQuantizer
 from src.eval import eval_model
-from src.losses import mindist_loss, repulsion_loss, softmin_grads
+from src.losses import mindist_loss, repulsion_loss, softmin_grads,distance_based_ce
 import time 
 import yaml
 
@@ -39,6 +39,9 @@ def train(config):
         quantizer = GridQuantizer(train_dataset.data_y, config['model']['proto_count_per_dim']).to(device)
     else:
         raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
+    
+    
+    
     
     optimizer = getattr(optim, config['train']['optimizer'])(list(model.parameters()) + list(quantizer.parameters()) , lr=config['train']['learning_rate'])
     # it should contain be under the dataset folder and inside the dataset folder it should have the time folder 
@@ -69,7 +72,8 @@ def train(config):
             optimizer.zero_grad()
             log_density_preds = model(inputs)
             log_prob_preds = log_density_preds + torch.log(proto_areas) 
-            ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], quantized_target_index)
+            #ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], quantized_target_index) 
+            ce_loss = distance_based_ce(log_prob_preds, targets, quantizer.protos)
             mindist = mindist_loss(targets, quantizer.protos)
             repulsion = repulsion_loss(quantizer.protos,margin = config["losses"]["repulsion_loss_margin"])
             loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight']
@@ -78,6 +82,7 @@ def train(config):
             torch.nn.utils.clip_grad_norm_(quantizer.parameters(),0.1)
             optimizer.step()
             
+            quantizer.clamp_protos()
             running_total_loss += loss.item()
             running_CE_loss += ce_loss.item()
             running_MinDist_loss += mindist.item()

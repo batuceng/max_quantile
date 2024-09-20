@@ -1,16 +1,12 @@
 import torch
 import torch.nn.functional as F
 
-def distance_based_ce(logits, cdist, areas, temp_logits=1.0, temp_cdist=1.0, epsilon=1e-8):
-    adjusted_logits = logits + torch.log(areas).unsqueeze(0).detach()  # Unsqueeze to match batch dimension
+def distance_based_ce(log_prob_preds, targets, protos, epsilon=1e-8):
     
-    adjusted_logits = adjusted_logits - adjusted_logits.max(dim=1, keepdim=True).values  # Stabilize logits before softmax
-    log_probs = F.softmax(adjusted_logits / temp_logits, dim=1)
-
-    cdist = cdist / temp_cdist
+    prob_preds = F.softmax(log_prob_preds, dim=1)    
+    cdist = torch.cdist(targets, protos, p=2)
     cdist = cdist / cdist.sum(dim=1, keepdim=True)
-
-    loss = -torch.sum(cdist * log_probs, dim=1)
+    loss = torch.sum(cdist * prob_preds, dim=1)
 
     return loss.mean()
 

@@ -9,8 +9,14 @@ from scipy.spatial import ConvexHull
 class GridQuantizer(nn.Module):
     def __init__(self, y_vals, proto_count_per_dim):
         super(GridQuantizer, self).__init__()
-        self.mins = np.min(y_vals, axis=0)  # (d,)
-        self.maxs = np.max(y_vals, axis=0)  # (d,)
+        self.mins = np.min(y_vals , axis=0)  # (d,)
+        self.maxs = np.max(y_vals , axis=0)  # (d,)
+        
+        length = self.maxs - self.mins
+        # Increase the boundary by 10% of the length
+        self.mins = self.mins - 0.1 * length
+        self.maxs = self.maxs + 0.1 * length
+        
         self.outer_hull = self.get_data_boundary_box(self.mins, self.maxs)
         d = y_vals.shape[1]  # Number of dimensions
         self.dims = d
@@ -53,6 +59,11 @@ class GridQuantizer(nn.Module):
         else:
             outer_point_list = torch.tensor(self.outer_hull)
         return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
+    
+    
+    def clamp_protos(self):
+        with torch.no_grad():
+            self.protos.clamp_(min=torch.from_numpy(self.mins).to(self.protos.device), max=torch.from_numpy(self.maxs).to(self.protos.device))
     
 class VoronoiQuantizer(GridQuantizer):
     def __init__(self, y_vals, proto_count_per_dim):
