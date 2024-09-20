@@ -107,11 +107,11 @@ def unconditional_2d_data_generator():
   plt.savefig(os.path.join(savedir, 'pdf_sampled.pdf'))
   plt.show()
 
-def prepare_concrete_dataset():
-  concrete_compressive_strength = fetch_ucirepo(id=165) 
-  # data (as pandas dataframes) 
-  X = concrete_compressive_strength.data.features.values
-  y = concrete_compressive_strength.data.targets.values
+
+def prepare_any_dataset(dataset_id,name): 
+  dataset = fetch_ucirepo(id=dataset_id) 
+  X = dataset.data.features.values
+  y = dataset.data.targets.values
   
   # split the data
   from sklearn.model_selection import train_test_split
@@ -135,17 +135,23 @@ def prepare_concrete_dataset():
     'cal_x': cal_x,
     'cal_y': cal_y,
   }
-  savedir = './raw/Concrete_Compressive_Strength'
+  savedir = f'./raw/{name}'
   os.makedirs(savedir, exist_ok=True)
   joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
   joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
   
   np.save(os.path.join(savedir, 'all_data.npy'), all_data)
-  
 
 
 
 # %%
-prepare_concrete_dataset()
-unconditional_2d_data_generator()
+if __name__ == '__main__':
+  unconditional_2d_data_generator()
+  
+  prepare_any_dataset(165,'Concrete_Compressive_Strength')
+  prepare_any_dataset(174,'Parkinsons')
+  prepare_any_dataset(186,'Wine Quality')
+
+
+
 # %%
