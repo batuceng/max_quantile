@@ -27,66 +27,69 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
 
     # Process calibration data
     with torch.no_grad():
-        cal_logits_list = []
-        cal_labels_list = []
+        cal_log_density_preds_list = []
+        cal_targets_list = []
+        cal_inputs_list = []
         for x_batch, y_batch in calib_data_loader:
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
-            cal_logits = model(x_batch)  # Model outputs log densities
-            cal_logits_list.append(cal_logits)
-            cal_labels_list.append(y_batch)
-        cal_logits = torch.cat(cal_logits_list, dim=0)  # Shape: [n_cal, num_prototypes]
-        cal_labels = torch.cat(cal_labels_list, dim=0)   # Shape: [n_cal, label_dim]
+            cal_log_density_preds = model(x_batch)  # Model outputs log densities
+            cal_log_density_preds_list.append(cal_log_density_preds)
+            cal_targets_list.append(y_batch)
+            cal_inputs_list.append(x_batch)
+        cal_log_density_preds = torch.cat(cal_log_density_preds_list, dim=0)  # Shape: [n_cal, num_prototypes]
+        cal_targets = torch.cat(cal_targets_list, dim=0)   # Shape: [n_cal, label_dim]
+        cal_inputs = torch.cat(cal_inputs_list, dim=0)   # Shape: [n_cal, input_dim]
 
     # Quantize the calibration labels using the quantizer
-    cal_mindist, cal_proto_indices = quantizer.quantize(cal_labels)  # Indices of nearest prototypes
+    cal_mindist, cal_proto_indices = quantizer.quantize(cal_targets)  # Indices of nearest prototypes
 
     # Adjust calibration logits with Voronoi region areas to get log probabilities
-    adjusted_cal_logits = cal_logits + torch.log(region_areas.unsqueeze(0))  # Shape: [n_cal, num_prototypes]
-    adjusted_cal_logits = torch.softmax(adjusted_cal_logits, dim=1)  # Convert to log probabilities
+    cal_log_prob_preds = cal_log_density_preds + torch.log(region_areas.unsqueeze(0))  # Shape: [n_cal, num_prototypes]
+    cal_prob_preds = torch.softmax(cal_log_prob_preds, dim=1)  # Convert to log probabilities
     # Get the log probabilities assigned to the true prototypes
-    true_class_log_probs = adjusted_cal_logits[torch.arange(len(adjusted_cal_logits)), cal_proto_indices]
+    true_class_pred_probs = cal_prob_preds[torch.arange(len(cal_prob_preds)), cal_proto_indices]
 
     # Sort the true class log probabilities
-    sorted_true_class_log_probs, _ = torch.sort(true_class_log_probs)
+    sorted_true_class_pred_probs, _ = torch.sort(true_class_pred_probs)
 
     # Compute the quantile threshold
-    quantile_threshold = np.quantile(sorted_true_class_log_probs.cpu().numpy(), 1 - alpha)
+    quantile_threshold = np.quantile(sorted_true_class_pred_probs.cpu().numpy(), 1 - alpha)
 
     # Process test data
     with torch.no_grad():
-        test_logits_list = []
-        test_labels_list = []
+        test_log_density_preds_list = []
+        test_targets_list = []
         test_inputs_list = []
         for x_batch, y_batch in test_data_loader:
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
-            test_logits = model(x_batch)  # Model outputs log densities
-            test_logits_list.append(test_logits)
-            test_labels_list.append(y_batch)
+            test_log_density_preds = model(x_batch)  # Model outputs log densities
+            test_log_density_preds_list.append(test_log_density_preds)
+            test_targets_list.append(y_batch)
             test_inputs_list.append(x_batch)
-        test_logits = torch.cat(test_logits_list, dim=0)  # Shape: [n_test, num_prototypes]
-        test_labels = torch.cat(test_labels_list, dim=0)   # Shape: [n_test, label_dim]
+        test_log_density_preds = torch.cat(test_log_density_preds_list, dim=0)  # Shape: [n_test, num_prototypes]
+        test_targets = torch.cat(test_targets_list, dim=0)   # Shape: [n_test, label_dim]
         test_inputs = torch.cat(test_inputs_list, dim=0)   # Shape: [n_test, input_dim]
 
     # Quantize the test labels using the quantizer
-    test_mindist, test_proto_indices = quantizer.quantize(test_labels)  # Indices of nearest prototypes
+    test_mindist, test_proto_indices = quantizer.quantize(test_targets)  # Indices of nearest prototypes
 
     # Adjust test logits with Voronoi region areas to get adjusted test log probabilities
-    adjusted_test_logits = test_logits + torch.log(region_areas.unsqueeze(0))  # Shape: [n_test, num_prototypes]
-    adjusted_test_probs = F.softmax(adjusted_test_logits, dim=1)  # Convert to probabilities
+    test_log_prob_preds = test_log_density_preds + torch.log(region_areas.unsqueeze(0))  # Shape: [n_test, num_prototypes]
+    test_prob_preds = F.softmax(test_log_prob_preds, dim=1)  # Convert to probabilities
 
     # Sort test logits (log densities) and get sorted indices
-    test_logits_sorted, sorted_indices = torch.sort(test_logits, dim=1, descending=True)  # [n_test, num_prototypes]
+    test_log_density_preds, sorted_indices = torch.sort(test_log_density_preds, dim=1, descending=True)  # [n_test, num_prototypes]
 
     # Get region areas sorted accordingly
     region_areas_sorted = region_areas[sorted_indices]  # [n_test, num_prototypes]
 
-    # Adjust the sorted log densities with log of region areas to get adjusted log probabilities
-    adjusted_log_probs_sorted = F.softmax(test_logits_sorted + torch.log(region_areas_sorted), dim=1)  # [n_test, num_prototypes]
+    # Get the prob preds, sorted by log densities
+    adjusted_probs_sorted = test_prob_preds[sorted_indices]  # [n_test, num_prototypes]
 
     # Create a mask where adjusted probabilities >= quantile threshold
-    mask = adjusted_log_probs_sorted >= quantile_threshold  # [n_test, num_prototypes], boolean
+    mask = adjusted_probs_sorted >= quantile_threshold  # [n_test, num_prototypes], boolean
 
     # Number of prototypes included per sample
     num_included = mask.sum(dim=1)  # [n_test], integer
@@ -113,20 +116,37 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
 
     # Check the input_dim and output_dim
     input_dim = test_inputs.shape[1]
-    output_dim = test_labels.shape[1]
+    output_dim = test_targets.shape[1]
 
     # Check the input_dim and output_dim
     input_dim = test_inputs.shape[1]
-    output_dim = test_labels.shape[1]
+    output_dim = test_targets.shape[1]
 
     if output_dim == 1:
         save_path = folder + f"/marginal_distribution_{alpha}.png"
-        visualize_1d(test_labels, adjusted_test_probs, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
+        visualize_1d(test_targets, test_prob_preds, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
     elif output_dim == 2:
         save_path = folder + f"/marginal_distribution_{alpha}.png"
-        visualize_2d(test_labels, adjusted_test_probs, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
+        visualize_2d(test_targets, test_prob_preds, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
+
 
     return coverage, pinaw_score
+
+def visualize_protos_1d(quantizer, cal_labels, save_path):
+    protos_np = quantizer.get_protos_numpy()
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.hist(cal_labels, bins=quantizer.shape[1])
+    plt.scatter(protos_np.flatten(), [0]*len(protos_np))
+    plt.savefig(save_path)
+    
+def visualize_protos_1d(quantizer, cal_logits_list, cal_labels, save_path):
+    protos_np = quantizer.get_protos_numpy()
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.hist(cal_labels, bins=quantizer.shape[1])
+    plt.scatter(protos_np.flatten(), [0]*len(protos_np))
+    plt.savefig(save_path)
 
 def visualize_1d(test_labels, adjusted_test_probs, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path):
     """

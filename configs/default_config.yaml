@@ -1,15 +1,15 @@
 train:
   batch_size: -1
-  learning_rate: 0.001
+  learning_rate: 0.0001
   epochs: 1000
-  optimizer: 'Adam'
+  optimizer: 'AdamW'
 
 losses:
   # cross entropy loss
   cross_entropy_weight: 1.0
   cross_entropy_temperature: 1.0
   # distance loss
-  mindist_weight: 1.0
+  mindist_weight: 0.2
   # Repulsion loss
   repulsion_loss_weight: 0.1
   repulsion_loss_margin: 0.01
@@ -17,14 +17,14 @@ losses:
   use_softmin_grads : False
 
 model:
-  input_dim: 8
+  input_dim: 11
   output_dim: 1
   proto_count_per_dim: 50
 
 quantizer:
-  quantizer_type: 'grid' # it can take "voronoi", "grid", "kdtree"
+  quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
   
 
 log_dir: './logs'
-dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
+dataset_path: './data/raw/White_Wine/all_data.npy'
 seed: 1

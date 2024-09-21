@@ -19,6 +19,8 @@ def distance_based_labeling(cdist,logits):
 def entropy_loss(logits):
     probs = F.softmax(logits, dim=1)
     log_probs = F.log_softmax(logits, dim=1)  # Use log_softmax for numerical stability
+    # log_probs[probs==0] = 0
+    print(f"zero_probs={(probs==0).sum()}")
     return - torch.sum(probs * log_probs, dim=1).mean()
 
 def repulsion_loss(prototypes, margin=1.0):

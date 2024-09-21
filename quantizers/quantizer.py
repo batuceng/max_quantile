@@ -68,12 +68,16 @@ class GridQuantizer(nn.Module):
         if hasattr(self.outer_hull,"points"):
             outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
         else:
-            outer_point_list = torch.tensor(self.outer_hull)
+            # outer_point_list = torch.tensor(self.outer_hull)
+            outer_point_list = np.array(self.outer_hull)
         return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
     
     @torch.no_grad()    
     def clamp_protos(self):
         self.protos.clamp_(min=torch.from_numpy(self.mins).to(self.protos.device), max=torch.from_numpy(self.maxs).to(self.protos.device))
+    
+    def get_protos_numpy(self):
+        return self.protos.detach().cpu().numpy()
     
 class VoronoiQuantizer(GridQuantizer):
     def __init__(self, y_vals, proto_count_per_dim):

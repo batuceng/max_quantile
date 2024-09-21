@@ -16,7 +16,7 @@ from data.dataset import CustomDataset
 from src.utils import prepare_training
 from quantizers.quantizer import VoronoiQuantizer,GridQuantizer
 from src.eval import eval_model
-from src.losses import mindist_loss, repulsion_loss, softmin_grads,distance_based_ce
+from src.losses import mindist_loss, repulsion_loss, softmin_grads, distance_based_ce, entropy_loss
 import time 
 import yaml
 
@@ -73,9 +73,15 @@ def train(config):
             optimizer.zero_grad()
             log_density_preds = model(inputs)
             log_prob_preds = log_density_preds + torch.log(proto_areas) 
-            ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], soft_quantized_target) 
+            # ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], soft_quantized_target) 
+            # # ce_loss = distance_based_ce(log_prob_preds, targets, quantizer.protos)
+            # mindist = mindist_loss(targets, quantizer.protos)
+
+            #Using l(y,y_pred)*q(y_pred) - tau H(q(y_pred))
+            ce_loss = distance_based_ce(log_prob_preds / config['losses']['cross_entropy_temperature'], targets, quantizer.protos) 
             # ce_loss = distance_based_ce(log_prob_preds, targets, quantizer.protos)
-            mindist = mindist_loss(targets, quantizer.protos)
+            mindist = entropy_loss(log_prob_preds)
+            
             repulsion = repulsion_loss(quantizer.protos,margin = config["losses"]["repulsion_loss_margin"])
             loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight']
             

@@ -28,6 +28,7 @@ def parse_arguments():
     """Parse command-line arguments for overriding config values."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./configs/default_config.yaml', help="Path to the config file.")
+    parser.add_argument('--quantizer_type', type=str, help="Override the learning rate in the config.")
     parser.add_argument('--learning_rate', type=float, help="Override the learning rate in the config.")
     parser.add_argument('--epochs', type=int, help="Override the number of epochs in the config.")
     parser.add_argument('--batch_size', type=int, help="Override the batch size in the config.")
@@ -40,6 +41,8 @@ def update_config_with_args(config, args):
     """Update the config with the values provided by command-line arguments."""
     if args.learning_rate is not None:
         config['train']['learning_rate'] = args.learning_rate
+    if args.quantizer_type is not None:
+        config['quantizer']['quantizer_type'] = args.quantizer_type
     if args.epochs is not None:
         config['train']['epochs'] = args.epochs
     if args.batch_size is not None:

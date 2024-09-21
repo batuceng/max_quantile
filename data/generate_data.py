@@ -135,7 +135,7 @@ def prepare_any_dataset(dataset_id,name):
     'cal_x': cal_x,
     'cal_y': cal_y,
   }
-  savedir = f'./raw/{name}'
+  savedir = f'data/raw/{name}'
   os.makedirs(savedir, exist_ok=True)
   joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
   joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
@@ -147,10 +147,14 @@ def prepare_any_dataset(dataset_id,name):
 # %%
 if __name__ == '__main__':
   unconditional_2d_data_generator()
+  print("Saved 2d Unconditional Data!")
   
   prepare_any_dataset(165,'Concrete_Compressive_Strength')
+  print("Saved 1d Concrete_Compressive_Strength Data!")
   prepare_any_dataset(174,'Parkinsons')
+  print("Saved 1d Parkinsons Data!")
   prepare_any_dataset(186,'White_Wine')
+  print("Saved 1d White_Wine Data!")
 
 
 
