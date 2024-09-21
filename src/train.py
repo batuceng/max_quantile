@@ -41,8 +41,6 @@ def train(config):
         raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
     
     
-    
-    
     optimizer = getattr(optim, config['train']['optimizer'])(list(model.parameters()) + list(quantizer.parameters()) , lr=config['train']['learning_rate'])
     # it should contain be under the dataset folder and inside the dataset folder it should have the time folder 
     time_str = time.strftime("%Y%m%d-%H%M%S")
