@@ -74,7 +74,10 @@ class GridQuantizer(nn.Module):
     
     @torch.no_grad()    
     def clamp_protos(self):
-        self.protos.clamp_(min=torch.from_numpy(self.mins).to(self.protos.device), max=torch.from_numpy(self.maxs).to(self.protos.device))
+        # self.protos= torch.nn.Parameter(self.protos.clamp(min=torch.from_numpy(self.mins).to(self.protos.device), 
+                                        # max=torch.from_numpy(self.maxs).to(self.protos.device)))
+        if self.protos.min().item() > self.mins.item() or self.maxs.item() < self.protos.max().item(): 
+            self.protos.clamp_(min=torch.from_numpy(self.mins).to(self.protos.device),  max=torch.from_numpy(self.maxs).to(self.protos.device))
     
     def get_protos_numpy(self):
         return self.protos.detach().cpu().numpy()

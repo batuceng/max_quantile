@@ -41,7 +41,8 @@ def train(config):
         raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
     
     
-    optimizer = getattr(optim, config['train']['optimizer'])(list(model.parameters()) + list(quantizer.parameters()) , lr=config['train']['learning_rate'])
+    optimizer = getattr(optim, config['train']['optimizer'])(model.parameters() , lr=config['train']['learning_rate'])
+    quant_optimizer = getattr(optim, config['train']['optimizer'])(quantizer.parameters() , lr=config['train']['quant_learning_rate'], weight_decay=0)
     # it should contain be under the dataset folder and inside the dataset folder it should have the time folder 
     time_str = time.strftime("%Y%m%d-%H%M%S")
     experiement_path = os.path.join(config['log_dir'],config['dataset_path'].split('/')[-2],config['quantizer']['quantizer_type'],time_str)
@@ -68,8 +69,10 @@ def train(config):
             inputs, targets = inputs.to(device), targets.to(device)
             proto_areas = torch.tensor(quantizer.get_areas()).to(device)
             qdist, quantized_target_index = quantizer.quantize(targets)
+            print(f"ep: {epoch}, protos: {quantizer.protos}")
             soft_quantized_target = quantizer.soft_quantize(targets, temp=0.1)
             optimizer.zero_grad()
+            quant_optimizer.zero_grad()
             log_density_preds = model(inputs)
             log_prob_preds = log_density_preds + torch.log(proto_areas) 
             # ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], soft_quantized_target) 
@@ -82,17 +85,21 @@ def train(config):
             entropy = entropy_loss(log_prob_preds)
             
             repulsion = repulsion_loss(quantizer.protos,margin = config["losses"]["repulsion_loss_margin"])
-            loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight'] + entropy * config['losses']['entropy_weight']
+            loss = ce_loss * config['losses']['cross_entropy_weight'] + \
+                    mindist * config['losses']['mindist_weight'] + \
+                    repulsion * config['losses']['repulsion_loss_weight'] + \
+                    entropy * config['losses']['entropy_weight']
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(quantizer.parameters(),0.1)
             optimizer.step()
-            
+            quant_optimizer.step()
             quantizer.clamp_protos()
             running_total_loss += loss.item()
             running_CE_loss += ce_loss.item()
             running_MinDist_loss += mindist.item()
             running_Repulsion_loss += repulsion.item()
+            running_entropy_loss += entropy.item()
             
         
         mean_proto_area = torch.mean(torch.tensor(quantizer.get_areas())).item()

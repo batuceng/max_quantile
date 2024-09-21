@@ -2,7 +2,8 @@ train:
   batch_size: -1
   learning_rate: 0.001
   epochs: 100
-  optimizer: 'Adam'
+  optimizer: 'AdamW'
+  quant_learning_rate: 0.001
 
 losses:
   # cross entropy loss
@@ -10,10 +11,10 @@ losses:
   cross_entropy_temperature: 1.0
   # distance loss
   entropy_weight: 0.02
-  mindist_weight: 0.1
+  mindist_weight: 10.0
   # Repulsion loss
   repulsion_loss_weight: 0.1
-  repulsion_loss_margin: 0.01
+  repulsion_loss_margin: 0.0001
 
   use_softmin_grads : False
 
