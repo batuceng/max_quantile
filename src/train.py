@@ -61,6 +61,7 @@ def train(config):
         running_CE_loss = 0.0
         running_MinDist_loss = 0.0
         running_Repulsion_loss = 0.0
+        running_entropy_loss = 0.0
         
         # Wrap train_data_loader with tqdm for batch-level progress
         for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}")):
@@ -73,15 +74,15 @@ def train(config):
             log_prob_preds = log_density_preds + torch.log(proto_areas) 
             # ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], soft_quantized_target) 
             # # ce_loss = distance_based_ce(log_prob_preds, targets, quantizer.protos)
-            # mindist = mindist_loss(targets, quantizer.protos)
 
             #Using l(y,y_pred)*q(y_pred) - tau H(q(y_pred))
             ce_loss = distance_based_ce(log_prob_preds / config['losses']['cross_entropy_temperature'], targets, quantizer.protos) 
             # ce_loss = distance_based_ce(log_prob_preds, targets, quantizer.protos)
-            mindist = entropy_loss(log_prob_preds)
+            mindist = mindist_loss(targets, quantizer.protos)
+            entropy = entropy_loss(log_prob_preds)
             
             repulsion = repulsion_loss(quantizer.protos,margin = config["losses"]["repulsion_loss_margin"])
-            loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight']
+            loss = ce_loss * config['losses']['cross_entropy_weight'] + mindist * config['losses']['mindist_weight'] + repulsion * config['losses']['repulsion_loss_weight'] + entropy * config['losses']['entropy_weight']
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(quantizer.parameters(),0.1)
@@ -103,6 +104,7 @@ def train(config):
         writer.add_scalar('Loss/train/CE', running_CE_loss / len(train_data_loader), epoch)
         writer.add_scalar('Loss/train/mindist', running_MinDist_loss / len(train_data_loader), epoch)
         writer.add_scalar('Loss/train/repulsion', running_Repulsion_loss / len(train_data_loader), epoch)
+        writer.add_scalar('Loss/train/entropy', running_entropy_loss / len(train_data_loader), epoch)
 
         writer.add_scalar('ProtoArea/mean', mean_proto_area, epoch)
         writer.add_scalar('ProtoArea/std', std_proto_area, epoch)
@@ -115,6 +117,7 @@ def train(config):
             'CE_percent': (running_CE_loss * config['losses']['cross_entropy_weight']) / (running_total_loss)*100,
             'MinDist_percent': (running_MinDist_loss * config['losses']['mindist_weight']) / (running_total_loss)*100,
             'Repulsion_percent': (running_Repulsion_loss * config['losses']['repulsion_loss_weight']) / (running_total_loss)*100,
+            'Entropy_percent': (running_entropy_loss * config['losses']['entropy_weight']) / (running_total_loss)*100
             },
             epoch)
 
