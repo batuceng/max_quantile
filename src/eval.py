@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 from src.utils import load_config
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 @torch.no_grad()
 def inference(dataloader, model, device):
@@ -114,7 +115,13 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
 
     if output_dim == 1:
         visualize_protos_1d(quantizer, cal_targets,prediction_set, folder + f"/protos_{alpha}.png")
-    #     save_path = folder + f"/marginal_distribution_{alpha}.png"
+        # Visualize a few samples
+        visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_logdens_{5}_alpha_{alpha}.png", ytitle="Log Density")
+        visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_logdens_{15}_alpha_{alpha}.png", ytitle="Log Density")
+        visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_logdens_{25}_alpha_{alpha}.png", ytitle="Log Density")
+        visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_prob_{5}_alpha_{alpha}.png", ytitle="Probability Dist")
+        visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_prob_{15}_alpha_{alpha}.png", ytitle="Probability Dist")
+        visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_prob_{25}_alpha_{alpha}.png", ytitle="Probability Dist")
     #     visualize_1d(test_targets, test_prob_preds, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
     # elif output_dim == 2:
     #     save_path = folder + f"/marginal_distribution_{alpha}.png"
@@ -124,27 +131,60 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
     return coverage, pinaw_score
 
 
-def visualize_protos_1d(quantizer, cal_labels, save_path):
+def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inputs, prediction_set, idx, save_path, ytitle):
     """
-    Mark position of prototype centers and get marginal distrubition of y labels
+    Visualize a test sample output with bar plot of predicted log densities,
+    scatter plot of prototypes, target values marked with 'x', and hlines for selected prototypes.
+    
+    Args:
+        quantizer: The quantizer object containing prototypes and region areas.
+        visual_variable: Variable to visualize, It can be log density, density, probability, area.
+        test_targets: The actual target values for the test samples.
+        test_inputs: The input data for the test samples (not used here).
+        prediction_set: The set of selected prototypes for additional highlighting (optional).
+        idx: The index of the sample to visualize.
+        save_path: Path where to save the generated plot.
     """
-    import matplotlib.pyplot as plt
-    protos_np = quantizer.gext_protos_numpy()
-    plt.figure()
-    plt.hist(cal_labels.flatten().detach().cpu().numpy(), bins=50)
-    plt.scatter(protos_np.flatten(), [0.1]*len(protos_np),c='red', marker='x', s=100)
-    plt.savefig(save_path)
+    # Extract prototypes as numpy array
+    protos_np = quantizer.get_protos_numpy()  # Assuming this method returns prototypes in a numpy array
+    region_areas = quantizer.get_areas()  # Assuming this method returns areas in a numpy array
+    decision_boundaries = quantizer.get_proto_decision_boundaries()
+    
+    sample_visual_variable = visual_variable[idx]  # Log density predictions for the sample
+    sample_target = test_targets[idx].item()  # Target values for the sample
+    sample_prediction_set = prediction_set[idx]
+    
+    plt.figure(figsize=(10, 6))
+    
+    # Plot the predicted log density as bar plots within decision boundaries
+    for i, proto in enumerate(protos_np):
+        height = sample_visual_variable[i]  # Use the predicted log density as the height of the bar
+        left, right = decision_boundaries[i]
+        width = right - left
+        center = (right + left) / 2
+        if i in sample_prediction_set:
+            plt.bar(center, height.item(), width=width.item(), align='center', alpha=0.5, label='Log Density' if i == 0 else None, color='red')
+        else:
+            plt.bar(center, height.item(), width=width.item(), align='center', alpha=0.5, label='Log Density' if i == 0 else None, color='blue')
 
-def visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx, save_path):
-    """
-    Visualize a test sample output
-    """
-    import matplotlib.pyplot as plt
-    protos_np = quantizer.get_protos_numpy()
-    plt.figure()
-    plt.hist(cal_labels.flatten().detach().cpu().numpy(), bins=50)
-    plt.scatter(protos_np.flatten(), [0.1]*len(protos_np),c='red', marker='x', s=100)
+    # Scatter plot for prototypes
+    plt.scatter(protos_np, np.zeros_like(protos_np), label='Prototypes', color='black', marker='D', zorder=5)
+
+    # Plot target values marked with 'x'
+    plt.scatter(sample_target, np.zeros_like(sample_target), label='Target Value', color='green', marker='x', zorder=6)
+
+    # Add titles and labels
+    plt.title(f"Sample {idx} Visualization")
+    plt.xlabel('Prototypes')
+    plt.ylabel(f"{ytitle} / Target Value")
+    plt.legend()
+    
+    # Save the figure
     plt.savefig(save_path)
+    
+    # Show the figure
+    plt.show()
+
 
 def visualize_protos_1d(quantizer, cal_labels, prediction_set, save_path):
     protos_np = quantizer.get_protos_numpy()

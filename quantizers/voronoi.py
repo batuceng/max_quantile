@@ -14,6 +14,14 @@ def get_voronoi_areas(points, boundaries):
         raise NotImplementedError(f"get_voronoi_areas is not implemented for d:{dims}")
 
 
+def get_voronoi_boundaries(points, boundaries):
+    dims = points.shape[1]
+    if dims==1:
+        return boundary_clipped_voronoi_boundaries_1d(points,  boundaries)
+    else:
+        raise NotImplementedError(f"get_voronoi_areas is not implemented for d:{dims}")
+        
+
 #!todo implement for other dimensions first for 1d
 
 def boundary_clipped_voronoi_areas_2d(points, boundaries):
@@ -127,3 +135,39 @@ def boundary_clipped_voronoi_areas_1d(points, boundaries):
     lengths = np.maximum(right_clipped - left_clipped, 0)
 
     return lengths
+
+def boundary_clipped_voronoi_boundaries_1d(points, boundaries):
+    """
+    Computes 1D Voronoi boundaries between points, clipped to lie within specified boundaries [a, b].
+    """
+    # Ensure points is a 1D array and sort them
+    points = np.sort(points.flatten())
+    a, b = boundaries
+    n = len(points)
+
+    if n == 0:
+        raise ValueError("Points array must contain at least one element.")
+
+    # Calculate midpoints between sorted points
+    midpoints = (points[:-1] + points[1:]) / 2  # Shape: (n - 1,)
+
+    # Initialize left and right boundaries for each Voronoi cell
+    left = np.empty(n)
+    right = np.empty(n)
+
+    # Set left boundaries
+    left[0] = a  # The first cell's left boundary is the overall boundary 'a'
+    left[1:] = midpoints  # Left boundaries for points 1 to n-1 are midpoints
+
+    # Set right boundaries
+    right[:-1] = midpoints  # Right boundaries for points 0 to n-2 are midpoints
+    right[-1] = b  # The last cell's right boundary is the overall boundary 'b'
+
+    # Clip left and right boundaries to the overall boundaries [a, b]
+    left_clipped = np.clip(left, a, b)
+    right_clipped = np.clip(right, a, b)
+
+    # Stack the left and right boundaries into a 2D array of shape (n, 2)
+    decision_boundaries = np.vstack((left_clipped, right_clipped)).T  # Shape: (n, 2)
+
+    return decision_boundaries

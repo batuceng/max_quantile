@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from itertools import product
 
-from .voronoi import get_voronoi_areas
+from .voronoi import get_voronoi_areas, get_voronoi_boundaries
 from scipy.spatial import ConvexHull
 
 class GridQuantizer(nn.Module):
@@ -63,6 +63,7 @@ class GridQuantizer(nn.Module):
             return ConvexHull(corner_points)
         else:
             raise ValueError("Unsupported dimensionality for get_data_boundary_box")
+        
     # Return area of each proto
     def get_areas(self):
         if hasattr(self.outer_hull,"points"):
@@ -71,6 +72,16 @@ class GridQuantizer(nn.Module):
             # outer_point_list = torch.tensor(self.outer_hull)
             outer_point_list = np.array(self.outer_hull)
         return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
+    
+    # Return area of each proto
+    def get_proto_decision_boundaries(self):
+        if hasattr(self.outer_hull,"points"):
+            outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
+        else:
+            # outer_point_list = torch.tensor(self.outer_hull)
+            outer_point_list = np.array(self.outer_hull)
+        return get_voronoi_boundaries(self.protos.detach().cpu().numpy(), outer_point_list)
+    
     
     @torch.no_grad()    
     def clamp_protos(self):
