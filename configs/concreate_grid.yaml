@@ -1,18 +1,20 @@
 train:
   batch_size: -1
-  learning_rate: 0.0003
+  learning_rate: 0.001
   epochs: 1000
-  optimizer: 'Adam'
+  optimizer: 'AdamW'
+  quant_learning_rate: 0.001
 
 losses:
   # cross entropy loss
   cross_entropy_weight: 1.0
   cross_entropy_temperature: 1.0
   # distance loss
-  mindist_weight: 0.1
+  entropy_weight: 0.0
+  mindist_weight: 0.2
   # Repulsion loss
   repulsion_loss_weight: 0.1
-  repulsion_loss_margin: 0.1
+  repulsion_loss_margin: 0.01
 
   use_softmin_grads : False
 
@@ -23,8 +25,10 @@ model:
 
 quantizer:
   quantizer_type: 'grid' # it can take "voronoi", "grid", "kdtree"
-  
+
+eval:
+  conformal_mode : "prob_th" # dens_th | prob_th
 
 log_dir: './logs'
 dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
-seed: 42
+seed: 1

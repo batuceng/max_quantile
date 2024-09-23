@@ -26,7 +26,7 @@ def inference(dataloader, model, device):
     inputs = torch.cat(inputs_list, dim=0)   # Shape: [n_test, input_dim]
     return log_density_preds, targets, inputs
 
-def eval_model(config, model, quantizer, folder, alpha=0.9,):
+def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
     # Load calibration dataset and data loader
     calib_dataset = CustomDataset(config['dataset_path'], mode='cal')
     bs = config['train']['batch_size'] if config['train']['batch_size'] != -1 else len(calib_dataset)
@@ -42,7 +42,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
     model.eval()
 
     # Get region areas
-    region_areas = quantizer.get_areas()  # Should return areas corresponding to prototypes
+    region_areas = quantizer.get_areas_pyvoro()  # Should return areas corresponding to prototypes
     region_areas = torch.tensor(region_areas, dtype=torch.float32).to(device)
 
     # Log densities, real y values, and conditions for calibration
@@ -57,7 +57,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
     # 1. Calculate qhat_prob by prob, expand regions until qhat_prob reached sorted by probs (Calib: %90, %85 -> %85 - Max Prob First, threshould by prob)
     # 1. Calculate qhat_prob by prob, expand regions until qhat_prob reached sorted by densities (Calib: %90, %85 -> %85 - Max Dens First, threshould by prob)
     # 1. Calculate qhat_dens by prob, expand regions until qhat_prob reached sorted by densities (Calib: %90, 12 -> 12 - Max Dens First, threshould by prob)
-    mode = "prob_th"
+    # mode = "prob_th"
     print(f"Conformal mode: {mode}")
     mode in ["prob_th", "dens_th"]
     if mode == "prob_th":
@@ -150,7 +150,7 @@ def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inpu
     """
     # Extract prototypes as numpy array
     protos_np = quantizer.get_protos_numpy()  # Assuming this method returns prototypes in a numpy array
-    region_areas = quantizer.get_areas()  # Assuming this method returns areas in a numpy array
+    region_areas = quantizer.get_areas_pyvoro()  # Assuming this method returns areas in a numpy array
     decision_boundaries = quantizer.get_proto_decision_boundaries()
     
     sample_visual_variable = visual_variable[idx]  # Log density predictions for the sample

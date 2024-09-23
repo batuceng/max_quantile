@@ -67,7 +67,7 @@ def train(config):
         # Wrap train_data_loader with tqdm for batch-level progress
         for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}")):
             inputs, targets = inputs.to(device), targets.to(device)
-            proto_areas = torch.tensor(quantizer.get_areas()).to(device)
+            proto_areas = torch.tensor(quantizer.get_areas_voronoi()).to(device)
             qdist, quantized_target_index = quantizer.quantize(targets)
             # print(f"ep: {epoch}, protos: {quantizer.protos}")
             soft_quantized_target = quantizer.soft_quantize(targets, temp=0.1)
@@ -102,10 +102,10 @@ def train(config):
             running_entropy_loss += entropy.item()
             
         
-        mean_proto_area = torch.mean(torch.tensor(quantizer.get_areas())).item()
-        std_proto_area = torch.std(torch.tensor(quantizer.get_areas())).item()
-        min_proto_area = torch.min(torch.tensor(quantizer.get_areas())).item()
-        max_proto_area = torch.max(torch.tensor(quantizer.get_areas())).item()
+        mean_proto_area = torch.mean(torch.tensor(quantizer.get_areas_voronoi())).item()
+        std_proto_area = torch.std(torch.tensor(quantizer.get_areas_voronoi())).item()
+        min_proto_area = torch.min(torch.tensor(quantizer.get_areas_voronoi())).item()
+        max_proto_area = torch.max(torch.tensor(quantizer.get_areas_voronoi())).item()
         # Logging to TensorBoard
         writer.add_scalar('Loss/train/total', running_total_loss / len(train_data_loader), epoch)
         writer.add_scalar('Loss/train/CE', running_CE_loss / len(train_data_loader), epoch)
@@ -129,9 +129,15 @@ def train(config):
             epoch)
 
     
-    covarage_01,pinaw_01 = eval_model(config, model,quantizer,alpha=0.1,folder=experiement_path)
-    covarage_05,pinaw_05 = eval_model(config, model,quantizer,alpha=0.5,folder=experiement_path)
-    covarage_09,pinaw_09 = eval_model(config, model,quantizer,alpha=0.9,folder=experiement_path)
+    covarage_01,pinaw_01 = eval_model(config, model,quantizer,alpha=0.1,folder=experiement_path,mode = config["eval"]["conformal_mode"])
+    covarage_05,pinaw_05 = eval_model(config, model,quantizer,alpha=0.5,folder=experiement_path,mode = config["eval"]["conformal_mode"])
+    covarage_09,pinaw_09 = eval_model(config, model,quantizer,alpha=0.9,folder=experiement_path,mode = config["eval"]["conformal_mode"])
+    # write a txt to covarage and pinaw
+    with open(os.path.join(experiement_path,'metrics.txt'),'w') as f:
+        f.write(f'Coverage 0.1: {covarage_01}, PINAW 0.1: {pinaw_01}\n')
+        f.write(f'Coverage 0.5: {covarage_05}, PINAW 0.5: {pinaw_05}\n')
+        f.write(f'Coverage 0.9: {covarage_09}, PINAW 0.9: {pinaw_09}\n')
+    
     writer.add_scalar('Coverage/0.1', covarage_01, epoch)
     writer.add_scalar('PINAW/0.1', pinaw_01, epoch)
     writer.add_scalar('Coverage/0.5', covarage_05, epoch)

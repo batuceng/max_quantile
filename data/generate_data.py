@@ -249,10 +249,10 @@ if __name__ == '__main__':
   if not os.path.exists('./raw/White_Wine'):
     prepare_any_dataset(186,'White_Wine')
     print("Saved 1d White_Wine Data!")
-  if not os.path.exists('./raw/Energy_Efficiency'):
+  if not os.path.exists('./raw/Energy_Efficiency'): # 2d 
     prepare_any_dataset(242,'Energy_Efficiency')
     print("Saved 2d Energy_Efficiency Data!")
-  if not os.path.exists('./raw/Solar_Flare'):
+  if not os.path.exists('./raw/Solar_Flare'): # 3d 
     prepare_any_dataset(89,'Solar_Flare')
     print("Saved 2d Solar_Flare Data!")
   

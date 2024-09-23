@@ -66,20 +66,21 @@ class GridQuantizer(nn.Module):
             raise ValueError("Unsupported dimensionality for get_data_boundary_box")
         
     # Return area of each proto
-    def get_areas(self):
-        if self.dims == 1:
-            if hasattr(self.outer_hull,"points"):
-                outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
-            else:
-                # outer_point_list = torch.tensor(self.outer_hull)
-                outer_point_list = np.array(self.outer_hull)
-            return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
-        elif self.dims in (2,3):
+    def get_areas_pyvoro(self):
+        if self.dims in (2,3):
             self.compute_pyvoro_voroni()
             return np.array(self.volumes)
         else:
             raise ValueError("Unsupported dimensionality for get_areas")
     
+    def get_areas_voronoi(self):
+        if hasattr(self.outer_hull,"points"):
+            outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
+        else:
+            # outer_point_list = torch.tensor(self.outer_hull)
+            outer_point_list = np.array(self.outer_hull)
+        return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
+
     # Return area of each proto
     def get_proto_decision_boundaries(self):
         if self.dims == 1:
@@ -92,7 +93,6 @@ class GridQuantizer(nn.Module):
         elif self.dims in (2,3):
             self.compute_pyvoro_voroni()
             return self.polygons_all
-        
         else: 
             raise ValueError("Unsupported dimensionality for get_proto_decision_boundaries")
 
