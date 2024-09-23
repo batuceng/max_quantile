@@ -15,7 +15,7 @@ from models.model import ProtoClassifier
 from data.dataset import CustomDataset
 from src.utils import prepare_training, remove_param_from_optimizer
 from quantizers.quantizer import VoronoiQuantizer,GridQuantizer
-from src.eval import eval_model, inference
+from src.eval import eval_model, get_prototype_usage_density
 from src.losses import mindist_loss, repulsion_loss, softmin_grads, distance_based_ce, entropy_loss
 import time 
 import yaml
@@ -67,15 +67,12 @@ def train(config):
         running_Repulsion_loss = 0.0
         running_entropy_loss = 0.0
         
+        usage_mode = "bincountbased"
+        assert usage_mode in ["bincountbased", "softlabelbased"]
         # Remove Protos
         if (((epoch+1)%40) == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
             with torch.no_grad():
-                log_density_preds, targets, inputs = inference(train_data_loader, model, device)
-                adjacencies, proto_areas = quantizer.get_adjancencies_and_volumes()
-                qdist, quantized_target_index = quantizer.quantize(targets)
-                # log_prob_preds = log_density_preds + torch.log(proto_areas)
-                prototype_usage = torch.bincount(quantized_target_index, minlength=quantizer.protos.size(0))
-                prototype_usage_density = prototype_usage / prototype_usage.sum()
+                prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
                 unused_proto_indices = torch.where(prototype_usage_density <= 0.01)[0]
                 # unused_proto_indices.drop(np.unique(*adjacencies))
                 quantizer.remove_proto(unused_proto_indices)
@@ -89,11 +86,7 @@ def train(config):
         # Add Protos
         if ((epoch+21)%40 == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
             with torch.no_grad():
-                log_density_preds, targets, inputs = inference(train_data_loader, model, device)
-                adjacencies, proto_areas = quantizer.get_adjancencies_and_volumes()
-                qdist, quantized_target_index = quantizer.quantize(targets)
-                prototype_usage = torch.bincount(quantized_target_index, minlength=quantizer.protos.size(0))
-                prototype_usage_density = prototype_usage / prototype_usage.sum()
+                prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
                 overused_proto_indices = torch.where(prototype_usage_density > 0.02)[0]
                 quantizer.add_proto(overused_proto_indices)
                 model.add_proto(overused_proto_indices)
@@ -169,7 +162,7 @@ def train(config):
             },
             epoch)
 
-    
+    print(f"Final Proto Count: {len(quantizer.protos)}")    
     covarage_01,pinaw_01 = eval_model(config, model,quantizer,alpha=0.1,folder=experiement_path,mode = config["eval"]["conformal_mode"])
     covarage_05,pinaw_05 = eval_model(config, model,quantizer,alpha=0.5,folder=experiement_path,mode = config["eval"]["conformal_mode"])
     covarage_09,pinaw_09 = eval_model(config, model,quantizer,alpha=0.9,folder=experiement_path,mode = config["eval"]["conformal_mode"])

@@ -1,7 +1,7 @@
 train:
   batch_size: -1
   learning_rate: 0.001
-  epochs: 100
+  epochs: 249
   optimizer: 'Adam'
   quant_learning_rate: 0.01
 
@@ -20,13 +20,13 @@ losses:
 model:
   input_dim: 1
   output_dim: 2
-  proto_count_per_dim: 10
+  proto_count_per_dim: 50
 
 quantizer:
   quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
 
 eval:
-  conformal_mode : "dens_th" # dens_th | prob_th
+  conformal_mode : "prob_th" # dens_th | prob_th
 
 log_dir: './logs'
 # dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'

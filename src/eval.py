@@ -235,3 +235,16 @@ def visualize_protos_1d(quantizer, cal_labels, prediction_set, save_path):
     plt.hist(cal_labels.flatten().detach().cpu().numpy(), bins=50)
     plt.scatter(protos_np.flatten(), [0.1]*len(protos_np),c='red', marker='x', s=100)
     plt.savefig(save_path)
+
+def get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device):
+    log_density_preds, targets, inputs = inference(train_data_loader, model, device)
+    adjacencies, proto_areas = quantizer.get_adjancencies_and_volumes()
+    qdist, quantized_target_index = quantizer.quantize(targets)
+    soft_quantized_target_index = quantizer.soft_quantize(targets)
+    if usage_mode == "bincountbased":
+        prototype_usage = torch.bincount(quantized_target_index, minlength=quantizer.protos.size(0))
+    elif usage_mode == "softlabelbased":
+        prototype_usage = soft_quantized_target_index.sum(dim=1)
+    else: raise NotImplementedError(f"No mode {usage_mode}")
+    prototype_usage_density = prototype_usage / prototype_usage.sum()
+    return prototype_usage_density

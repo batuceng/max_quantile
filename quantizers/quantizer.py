@@ -45,7 +45,7 @@ class GridQuantizer(nn.Module):
         return mindist, pos  # Return the index of nearest prototype
 
     # @torch.no_grad()
-    def soft_quantize(self, x, temp):
+    def soft_quantize(self, x, temp=0.1):
         if isinstance(x, np.ndarray):
             x = torch.tensor(x, dtype=torch.float32)
         cdist_list = torch.cdist(x, self.protos, p=2)

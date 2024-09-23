@@ -23,7 +23,7 @@ model:
   proto_count_per_dim: 50
 
 quantizer:
-  quantizer_type: 'grid' # it can take "voronoi", "grid", "kdtree"
+  quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
 
 eval:
   conformal_mode : "prob_th" # dens_th | prob_th
