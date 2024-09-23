@@ -1,7 +1,7 @@
 train:
   batch_size: -1
   learning_rate: 0.001
-  epochs: 19
+  epochs: 149
   optimizer: 'Adam'
   quant_learning_rate: 0.01
 
@@ -19,8 +19,8 @@ losses:
   use_softmin_grads : False
 model:
   input_dim: 1
-  output_dim: 2
-  proto_count_per_dim: 10
+  output_dim: 1
+  proto_count_per_dim: 50
 
 quantizer:
   quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
@@ -30,5 +30,6 @@ eval:
 
 log_dir: './logs'
 # dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
-dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'
+# dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'
+dataset_path: './data/raw/Unconditional_1d_data/all_data.npy'
 seed: 42

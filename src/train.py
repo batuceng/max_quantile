@@ -73,7 +73,7 @@ def train(config):
         if (((epoch+1)%40) == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
             with torch.no_grad():
                 prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
-                unused_proto_indices = torch.where(prototype_usage_density <= 0.01)[0]
+                unused_proto_indices = torch.where(prototype_usage_density <= 0.001)[0]
                 # unused_proto_indices.drop(np.unique(*adjacencies))
                 quantizer.remove_proto(unused_proto_indices)
                 model.remove_proto(unused_proto_indices)
@@ -87,7 +87,7 @@ def train(config):
         if ((epoch+21)%40 == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
             with torch.no_grad():
                 prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
-                overused_proto_indices = torch.where(prototype_usage_density > 0.02)[0]
+                overused_proto_indices = torch.where(prototype_usage_density > 0.01)[0]
                 quantizer.add_proto(overused_proto_indices)
                 model.add_proto(overused_proto_indices)
                 # Fix quantizers

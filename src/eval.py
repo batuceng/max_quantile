@@ -102,7 +102,8 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
 
     region_set = []
     for i in range(len(prediction_set)):
-        region_area = region_areas[prediction_set[i] != -1].sum().detach().cpu().numpy()
+        unique_set = np.setdiff1d(prediction_set[i].detach().cpu().numpy(),[-1])
+        region_area = region_areas[unique_set].sum().detach().cpu().numpy()
         region_set.append(region_area)
     
     pinaw_score = np.mean(region_set)
