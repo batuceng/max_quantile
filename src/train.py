@@ -69,7 +69,7 @@ def train(config):
             inputs, targets = inputs.to(device), targets.to(device)
             proto_areas = torch.tensor(quantizer.get_areas()).to(device)
             qdist, quantized_target_index = quantizer.quantize(targets)
-            print(f"ep: {epoch}, protos: {quantizer.protos}")
+            # print(f"ep: {epoch}, protos: {quantizer.protos}")
             soft_quantized_target = quantizer.soft_quantize(targets, temp=0.1)
             optimizer.zero_grad()
             quant_optimizer.zero_grad()

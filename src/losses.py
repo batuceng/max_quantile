@@ -4,8 +4,10 @@ import torch.nn.functional as F
 def distance_based_ce(log_prob_preds, targets, protos, epsilon=1e-8):
     
     prob_preds = F.softmax(log_prob_preds, dim=1)    
-    cdist = torch.cdist(targets, protos, p=2)
-    cdist = cdist / cdist.sum(dim=1, keepdim=True)
+    cdist = torch.cdist(targets, protos, p=1)
+    # cdist = cdist / cdist.sum(dim=1, keepdim=True)
+    # cdist = 1 - F.cosine_similarity(targets.unsqueeze(1), protos.unsqueeze(0), dim=2)
+    # cdist = F.softmax(-cdist, dim=1)
     loss = torch.sum(cdist * prob_preds, dim=1)
 
     return loss.mean()

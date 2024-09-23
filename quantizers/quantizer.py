@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from itertools import product
 
 from .voronoi import get_voronoi_areas, get_voronoi_boundaries
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, Voronoi
 
 class GridQuantizer(nn.Module):
     def __init__(self, y_vals, proto_count_per_dim):
@@ -82,14 +82,16 @@ class GridQuantizer(nn.Module):
             outer_point_list = np.array(self.outer_hull)
         return get_voronoi_boundaries(self.protos.detach().cpu().numpy(), outer_point_list)
     
+    def get_voronoi_diagram(self):
+        return Voronoi(self.protos.detach().cpu().numpy())
     
     @torch.no_grad()    
     def clamp_protos(self):
-        # self.protos= torch.nn.Parameter(self.protos.clamp(min=torch.from_numpy(self.mins).to(self.protos.device), 
-                                        # max=torch.from_numpy(self.maxs).to(self.protos.device)))
-        if self.protos.min().item() > self.mins.item() or self.maxs.item() < self.protos.max().item(): 
-            self.protos.clamp_(min=torch.from_numpy(self.mins).to(self.protos.device),  max=torch.from_numpy(self.maxs).to(self.protos.device))
-    
+        mins = torch.from_numpy(self.mins).to(self.protos.device)  # Shape: [feature_dim]
+        maxs = torch.from_numpy(self.maxs).to(self.protos.device)  # Shape: [feature_dim]
+        self.protos.data.clamp_(min=mins, max=maxs)
+        
+
     def get_protos_numpy(self):
         return self.protos.detach().cpu().numpy()
     

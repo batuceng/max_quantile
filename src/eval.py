@@ -3,9 +3,10 @@ import torch
 from data.dataset import CustomDataset
 from torch.utils.data import DataLoader
 import numpy as np
-from src.utils import load_config
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from scipy.spatial import Voronoi
+from matplotlib.collections import PolyCollection
 
 @torch.no_grad()
 def inference(dataloader, model, device):
@@ -60,8 +61,8 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
     print(f"Conformal mode: {mode}")
     mode in ["prob_th", "dens_th"]
     if mode == "prob_th":
-        cal_pi = torch.argsort(cal_prob_preds, dim=1, descending=True)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
-        # cal_pi = torch.argsort(cal_log_density_preds, dim=1, descending=True)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
+        # cal_pi = torch.argsort(cal_prob_preds, dim=1, descending=True)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
+        cal_pi = torch.argsort(cal_log_density_preds, dim=1, descending=True)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
         cal_prob_preds_sorted = torch.gather(cal_prob_preds, 1, cal_pi)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
         cal_prob_cumsum = torch.cumsum(cal_prob_preds_sorted, dim=1)  # [n_cal, num_prototypes] # Cumulative sum of probabilities all samples are 1 at the end
         cal_proto_indices_in_sorted = cal_pi.argsort(dim=1)[torch.arange(len(cal_prob_preds)), cal_proto_indices] # true class index in the sorted array
@@ -86,8 +87,8 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
     test_prob_preds = F.softmax(test_log_prob_preds, dim=1)  # Convert to probabilities
     
     if mode == "prob_th":
-        # test_pi = torch.argsort(test_log_density_preds, dim=1, descending=True)  # [n_test, num_prototypes] # sort the probabilities according to the density values
-        test_pi = torch.argsort(test_prob_preds, dim=1, descending=True)  # [n_test, num_prototypes] # sort the probabilities according to the density values
+        # test_pi = torch.argsort(test_prob_preds, dim=1, descending=True)  # [n_test, num_prototypes] # sort the probabilities according to the density values
+        test_pi = torch.argsort(test_log_density_preds, dim=1, descending=True)  # [n_test, num_prototypes] # sort the probabilities according to the density values
         test_prob_preds_sorted = torch.gather(test_prob_preds, 1, test_pi)  # [n_test, num_prototypes] # sort the probabilities according to the density values
         
         test_prob_cumsum = torch.cumsum(test_prob_preds_sorted, dim=1)  # [n_test, num_prototypes] # Cumulative sum of probabilities all samples are 1 at the end
@@ -126,7 +127,9 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,):
     # elif output_dim == 2:
     #     save_path = folder + f"/marginal_distribution_{alpha}.png"
     #     visualize_2d(test_targets, test_prob_preds, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
-
+    elif output_dim == 2:
+        save_path = folder + f"/marginal_distribution_{alpha}.png"
+        visualize_y_marginal_with_voronoi(quantizer, test_targets, prediction_set, save_path)
 
     return coverage, pinaw_score
 
@@ -184,7 +187,52 @@ def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inpu
     
     # Show the figure
     plt.show()
+def visualize_y_marginal_with_voronoi(quantizer, test_targets, prediction_set, save_path):
+    # Plot the probability distribution over the 2D grid using the bin edges
+    proto_centers = quantizer.get_protos_numpy()
+    vor = quantizer.get_voronoi_diagram()
+    
+    
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(1, 1, 1)  # nrows, ncols, index
 
+    highlight_color = 'green'  # Color for top_indices regions
+
+    # Create the colormap for other regions
+    cmap = plt.get_cmap('jet')
+    norm = plt.Normalize(vmin=test_targets.min(), vmax=test_targets.max())
+    prediction_set_unique = torch.unique(prediction_set)
+    
+    regions = []
+    colors = []
+    for i, region_index in enumerate(vor.point_region):
+        region = vor.regions[region_index]
+        if not -1 in region and len(region) > 0:
+            polygon = [vor.vertices[j] for j in region]
+            regions.append(polygon)
+            
+            if i in prediction_set_unique:
+                colors.append(highlight_color)  # Use the highlight color for top regions
+            else:
+                colors.append(cmap(0))
+    
+    voronoi_region_collection = PolyCollection(regions, facecolors=colors, edgecolors='k', alpha=0.6)
+    ax.add_collection(voronoi_region_collection)
+    
+    ax.scatter(proto_centers[:, 0], proto_centers[:, 1], marker='x', c='red', s=1)
+    plt.xlim(proto_centers[:, 0].min() - 0.1, proto_centers[:, 0].max() + 0.1)
+    plt.ylim(proto_centers[:, 1].min() - 0.1, proto_centers[:, 1].max() + 0.1)
+    plt.title('Probability Distribution over the 2D Space with Voronoi Tessellation')
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+
+    # Add colorbar
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    plt.colorbar(sm, ax=ax, label='Probability')
+
+    plt.show()
+    plt.savefig(save_path)
 
 def visualize_protos_1d(quantizer, cal_labels, prediction_set, save_path):
     protos_np = quantizer.get_protos_numpy()
@@ -193,96 +241,3 @@ def visualize_protos_1d(quantizer, cal_labels, prediction_set, save_path):
     plt.hist(cal_labels.flatten().detach().cpu().numpy(), bins=50)
     plt.scatter(protos_np.flatten(), [0.1]*len(protos_np),c='red', marker='x', s=100)
     plt.savefig(save_path)
-
-def visualize_1d(test_labels, adjusted_test_probs, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path):
-    """
-    Visualize the marginal distribution of p(y) for 1D outputs.
-    """
-    import matplotlib.pyplot as plt
-
-    # Get prototypes and their corresponding probabilities
-    protos = quantizer.protos.detach().cpu().numpy().flatten()  # Shape: [num_prototypes]
-    adjusted_probs = adjusted_test_probs.detach().cpu().numpy()  # Shape: [n_test, num_prototypes]
-    test_labels_np = test_labels.detach().cpu().numpy().flatten()  # Shape: [n_test]
-
-    # Aggregate probabilities over all test samples
-    mean_probs = np.mean(adjusted_probs, axis=0)  # Shape: [num_prototypes]
-
-    # Get the coverage indicator
-    covered = correct_predictions.cpu().numpy().astype(bool)
-
-    # Plot the marginal distribution
-    plt.figure(figsize=(10, 6))
-    plt.bar(protos, mean_probs, width=0.05, alpha=0.7, label='Mean Predicted Probability')
-
-    # Plot the prediction intervals
-    included_protos = protos[np.any(mask.cpu().numpy(), axis=0)]
-    plt.axvspan(included_protos.min(), included_protos.max(), color='lightgreen', alpha=0.3, label='Prediction Interval')
-
-    # Plot the test labels
-    plt.scatter(test_labels_np[covered], np.zeros_like(test_labels_np[covered]), c='blue', marker='x', label='Covered Test Labels')
-    plt.scatter(test_labels_np[~covered], np.zeros_like(test_labels_np[~covered]), c='red', marker='x', label='Uncovered Test Labels')
-
-    plt.title(f'Marginal Distribution of p(y) - 1D Output\nCoverage: {coverage:.2f}%')
-    plt.xlabel('y')
-    plt.ylabel('Probability')
-    plt.legend()
-    
-    plt.savefig(save_path)
-    print(f"Saved the plot at {save_path}")
-
-def visualize_2d(test_labels, adjusted_test_probs, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path):
-    """
-    Visualize the marginal distributions of p(y) for 2D outputs.
-    """
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-
-    # Get prototypes and their corresponding probabilities
-    protos = quantizer.protos.detach().cpu().numpy()  # Shape: [num_prototypes, 2]
-    adjusted_probs = adjusted_test_probs.detach().cpu().numpy()  # Shape: [n_test, num_prototypes]
-    test_labels_np = test_labels.detach().cpu().numpy()  # Shape: [n_test, 2]
-
-    # Aggregate probabilities over all test samples
-    mean_probs = np.mean(adjusted_probs, axis=0)  # Shape: [num_prototypes]
-
-    # Get the coverage indicator
-    covered = correct_predictions.cpu().numpy().astype(bool)
-
-    # Create a 3D scatter plot
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
-
-    # Plot the marginal probability distribution as points sized by mean_probs
-    sc = ax.scatter(protos[:, 0], protos[:, 1], mean_probs * 100, c=mean_probs, cmap='viridis', s=mean_probs * 1000, alpha=0.7, label='Mean Predicted Probability')
-
-    # Plot the test labels
-    ax.scatter(test_labels_np[covered, 0], test_labels_np[covered, 1], np.zeros_like(test_labels_np[covered, 0]), c='blue', marker='x', label='Covered Test Labels')
-    ax.scatter(test_labels_np[~covered, 0], test_labels_np[~covered, 1], np.zeros_like(test_labels_np[~covered, 0]), c='red', marker='x', label='Uncovered Test Labels')
-
-    # Add color bar
-    fig.colorbar(sc, ax=ax, label='Mean Probability')
-
-    ax.set_title(f'Marginal Distribution of p(y) - 2D Output\nCoverage: {coverage:.2f}%')
-    ax.set_xlabel('y1')
-    ax.set_ylabel('y2')
-    ax.set_zlabel('Probability (%)')
-    ax.legend()
-    plt.savefig(save_path)
-
-
-
-
-# def evaluate():
-#     config = load_config('./configs/default_config.yaml')
-#     dataset = CustomDataset(config['dataset_path'])
-#     dataloader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=False)
-
-#     model = RegressionModel(config['input_dim'], config['output_dim'])
-#     model.load_state_dict(torch.load('./model_checkpoint.pth'))  # Load trained model
-
-#     model.eval()
-#     with torch.no_grad():
-#         for x, y in dataloader:
-#             outputs = model(x)
-#             # Evaluate performance here

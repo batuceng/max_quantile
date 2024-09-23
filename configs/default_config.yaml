@@ -1,8 +1,8 @@
 train:
   batch_size: -1
   learning_rate: 0.001
-  epochs: 100
-  optimizer: 'AdamW'
+  epochs: 20
+  optimizer: 'Adam'
   quant_learning_rate: 0.001
 
 losses:
@@ -10,17 +10,17 @@ losses:
   cross_entropy_weight: 1.0
   cross_entropy_temperature: 1.0
   # distance loss
-  entropy_weight: 0.02
-  mindist_weight: 10.0
+  entropy_weight: 0.0
+  mindist_weight: 0.0
   # Repulsion loss
-  repulsion_loss_weight: 0.1
-  repulsion_loss_margin: 0.0001
+  repulsion_loss_weight: 0.0
+  repulsion_loss_margin: 0.001
 
   use_softmin_grads : False
 
 model:
-  input_dim: 11
-  output_dim: 1
+  input_dim: 1
+  output_dim: 2
   proto_count_per_dim: 50
 
 quantizer:
@@ -28,5 +28,5 @@ quantizer:
   
 
 log_dir: './logs'
-dataset_path: './data/raw/White_Wine/all_data.npy'
+dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'
 seed: 1
