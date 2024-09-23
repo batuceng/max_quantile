@@ -57,3 +57,11 @@ def prepare_training():
     config = load_config(args.config)  # Step 2: Load the YAML configuration file
     config = update_config_with_args(config, args)  # Step 3: Override config with CLI arguments
     return config
+
+
+def remove_param_from_optimizer(optim, pg_index):
+    # Remove corresponding state
+    for param in optim.param_groups[pg_index]['params']:
+        if param in optim.state:
+            del optim.state[param]
+    del optim.param_groups[pg_index]

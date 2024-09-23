@@ -13,9 +13,9 @@ from tqdm import tqdm
 
 from models.model import ProtoClassifier
 from data.dataset import CustomDataset
-from src.utils import prepare_training
+from src.utils import prepare_training, remove_param_from_optimizer
 from quantizers.quantizer import VoronoiQuantizer,GridQuantizer
-from src.eval import eval_model
+from src.eval import eval_model, inference
 from src.losses import mindist_loss, repulsion_loss, softmin_grads, distance_based_ce, entropy_loss
 import time 
 import yaml
@@ -41,7 +41,10 @@ def train(config):
         raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
     
     
-    optimizer = getattr(optim, config['train']['optimizer'])(model.parameters() , lr=config['train']['learning_rate'])
+    optimizer = getattr(optim, config['train']['optimizer'])([
+        {'params': model.net.parameters()},
+        {'params': model.head.parameters(),},
+        ] , lr=config['train']['learning_rate'])
     quant_optimizer = getattr(optim, config['train']['optimizer'])(quantizer.parameters() , lr=config['train']['quant_learning_rate'], weight_decay=0)
     # it should contain be under the dataset folder and inside the dataset folder it should have the time folder 
     time_str = time.strftime("%Y%m%d-%H%M%S")
@@ -64,6 +67,43 @@ def train(config):
         running_Repulsion_loss = 0.0
         running_entropy_loss = 0.0
         
+        # Remove Protos
+        if (((epoch+1)%40) == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
+            with torch.no_grad():
+                log_density_preds, targets, inputs = inference(train_data_loader, model, device)
+                adjacencies, proto_areas = quantizer.get_adjancencies_and_volumes()
+                qdist, quantized_target_index = quantizer.quantize(targets)
+                # log_prob_preds = log_density_preds + torch.log(proto_areas)
+                prototype_usage = torch.bincount(quantized_target_index, minlength=quantizer.protos.size(0))
+                prototype_usage_density = prototype_usage / prototype_usage.sum()
+                unused_proto_indices = torch.where(prototype_usage_density <= 0.01)[0]
+                # unused_proto_indices.drop(np.unique(*adjacencies))
+                quantizer.remove_proto(unused_proto_indices)
+                model.remove_proto(unused_proto_indices)
+                # Fix quantizers
+                remove_param_from_optimizer(optimizer, 1) # Clear model.head from optimizer
+                optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
+                remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
+                quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
+                print(f"{len(unused_proto_indices)} Protos Removed!")
+        # Add Protos
+        if ((epoch+21)%40 == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
+            with torch.no_grad():
+                log_density_preds, targets, inputs = inference(train_data_loader, model, device)
+                adjacencies, proto_areas = quantizer.get_adjancencies_and_volumes()
+                qdist, quantized_target_index = quantizer.quantize(targets)
+                prototype_usage = torch.bincount(quantized_target_index, minlength=quantizer.protos.size(0))
+                prototype_usage_density = prototype_usage / prototype_usage.sum()
+                overused_proto_indices = torch.where(prototype_usage_density > 0.02)[0]
+                quantizer.add_proto(overused_proto_indices)
+                model.add_proto(overused_proto_indices)
+                # Fix quantizers
+                remove_param_from_optimizer(optimizer, 1) # Clear model.head from optimizer
+                optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
+                remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
+                quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
+                print(f"{len(overused_proto_indices)} Protos Added!")
+                
         # Wrap train_data_loader with tqdm for batch-level progress
         for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}")):
             inputs, targets = inputs.to(device), targets.to(device)
@@ -117,6 +157,7 @@ def train(config):
         writer.add_scalar('ProtoArea/std', std_proto_area, epoch)
         writer.add_scalar('ProtoArea/min', min_proto_area, epoch)
         writer.add_scalar('ProtoArea/max', max_proto_area, epoch)
+        writer.add_scalar('ProtoArea/count', len(quantizer.protos))
         
         writer.add_scalars(
             'Percentage/train', 

@@ -75,6 +75,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
         # cal_scores = cal_log_density_preds_sorted[torch.arange(len(cal_log_density_preds)), cal_proto_indices_in_sorted] # values of the true class in the cumulative sum
         cal_scores = cal_log_density_preds[torch.arange(len(cal_log_density_preds)), cal_proto_indices]
         n = cal_targets.shape[0] # number of samples
+        # alpha = 1-alpha
         quantile_threshold = np.quantile(cal_scores.detach().cpu().numpy(), np.ceil((n + 1) * (1 - alpha)) / n, interpolation="higher") # quantile threshold
 
 
@@ -184,9 +185,9 @@ def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inpu
     
     # Save the figure
     plt.savefig(save_path)
-    
     # Show the figure
-    plt.show()
+    plt.close()
+    
 def visualize_y_marginal_with_voronoi(quantizer, test_targets, prediction_set, save_path):
     # Plot the probability distribution over the 2D grid using the bin edges
     proto_centers = quantizer.get_protos_numpy()

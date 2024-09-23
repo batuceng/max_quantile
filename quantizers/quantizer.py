@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from itertools import product
+import warnings
+
 
 from .voronoi import get_voronoi_areas, get_voronoi_boundaries
 from scipy.spatial import ConvexHull, Voronoi
@@ -67,11 +69,36 @@ class GridQuantizer(nn.Module):
         
     # Return area of each proto
     def get_areas_pyvoro(self):
-        if self.dims in (2,3):
+        if self.dims == 1:
+            warnings.warn("Pyvoro is not implemented for 1d. Running Sklearn Voronoi!")
+            return self.get_areas_voronoi()
+        elif self.dims in (2,3):
             self.compute_pyvoro_voroni()
             return np.array(self.volumes)
         else:
             raise ValueError("Unsupported dimensionality for get_areas")
+    
+    def get_adjancencies_and_volumes(self):
+        if self.dims == 1:
+            protos_np =  self.get_protos_numpy()
+            sorted_indices = protos_np.argsort()
+            adjacenst_cells_all = []
+            for i, sorted_pos in enumerate(sorted_indices):
+                if i==0:
+                    adjacenst_cells_all.append([sorted_indices[i+1]])
+                elif i==(len(sorted_indices)-1):
+                    adjacenst_cells_all.append([sorted_indices[i-1]])
+                else:
+                    adjacenst_cells_all.append([sorted_indices[i-1],sorted_indices[i+1]])
+            volumes = self.get_areas_voronoi()
+        elif self.dims in (2,3):
+            self.compute_pyvoro_voroni()
+            adjacenst_cells_all = self.adjacenst_cells_all
+            volumes = self.volumes
+        else:
+            raise NotImplementedError(f"Not implemented for dims {self.dims}")
+        return (adjacenst_cells_all, volumes) 
+
     
     def get_areas_voronoi(self):
         if hasattr(self.outer_hull,"points"):
@@ -149,16 +176,21 @@ class VoronoiQuantizer(GridQuantizer):
     # Delete the prototypes in the given indices
     @torch.no_grad()
     def remove_proto(self, indices):
-        mask = np.full(len(self.protos),True,dtype=bool)
+        mask = torch.full((len(self.protos),), True, dtype=bool)
         mask[indices] = False
-        self.protos = self.protos[mask]
+        new_protos = self.protos[mask]
+        self.protos = nn.Parameter(new_protos, requires_grad=True)
 
     # Repeat the prototypes in the given indices and concat to the end
     @torch.no_grad()
     def add_proto(self, indices):
-        mask = np.full(len(self.protos),False,dtype=bool)
+        mask = torch.full((len(self.protos),), False, dtype=bool)
         mask[indices] = True
-        self.protos = torch.vstack(self.protos, self.protos[mask])
+        selected_protos = self.protos[mask]
+        noisy_copies = selected_protos + (0.01**0.5)*torch.randn_like(selected_protos)
+
+        new_protos = torch.vstack((self.protos, noisy_copies))
+        self.protos = nn.Parameter(new_protos, requires_grad=True)
     
     
 #%%

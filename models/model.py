@@ -33,16 +33,29 @@ class ProtoClassifier(nn.Module):
     # Delete the prototypes in the given indices
     # indices : (0,3,5)
     # new_indices = 1=: 0 , 2=: 1 , 4=: 2
+    @torch.no_grad()
     def remove_proto(self, indices):
-        mask = np.full(len(self.head.weight),True,dtype=bool)
+        mask = torch.full((len(self.head.weight),), True, dtype=bool)
         mask[indices] = False
-        self.head.weight = self.head.weight[mask]
-        self.head.bias = self.head.bias[mask]
+        new_weights = self.head.weight.data[mask]
+        new_biases = self.head.bias.data[mask]
 
-    # Repeat the prototypes in the given indices and concat to the end
-    def add_proto(self, indices):
-        mask = np.full(len(self.head.weight),False,dtype=bool)
-        mask[indices] = True
-        self.head.weight = torch.vstack(self.head.weight, self.head.weight[mask])
-        self.head.bias = torch.vstack(self.head.bias, self.head.bias[mask])
+        self.proto_count = new_biases.shape[0]
+        new_head = nn.Linear(self.hidden_size, self.proto_count)
+        new_head.weight.data = new_weights
+        new_head.bias.data = new_biases
+        self.head = new_head
         
+    # Repeat the prototypes in the given indices and concat to the end
+    @torch.no_grad()
+    def add_proto(self, indices):
+        mask = torch.full((len(self.head.weight),), False, dtype=bool)
+        mask[indices] = True
+        new_weights = torch.vstack((self.head.weight.data, self.head.weight.data[mask]))
+        new_biases = torch.cat((self.head.bias.data, self.head.bias.data[mask]))
+        
+        self.proto_count = new_biases.shape[0]
+        new_head = nn.Linear(self.hidden_size, self.proto_count)
+        new_head.weight.data = new_weights
+        new_head.bias.data = new_biases
+        self.head = new_head
