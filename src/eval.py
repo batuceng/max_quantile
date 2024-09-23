@@ -190,8 +190,6 @@ def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inpu
 def visualize_y_marginal_with_voronoi(quantizer, test_targets, prediction_set, save_path):
     # Plot the probability distribution over the 2D grid using the bin edges
     proto_centers = quantizer.get_protos_numpy()
-    vor = quantizer.get_voronoi_diagram()
-    
     
     fig = plt.figure(figsize=(8, 8))
     ax = fig.add_subplot(1, 1, 1)  # nrows, ncols, index
@@ -203,28 +201,23 @@ def visualize_y_marginal_with_voronoi(quantizer, test_targets, prediction_set, s
     norm = plt.Normalize(vmin=test_targets.min(), vmax=test_targets.max())
     prediction_set_unique = torch.unique(prediction_set)
     
-    regions = []
+    polygons = quantizer.get_proto_decision_boundaries()
     colors = []
-    for i, region_index in enumerate(vor.point_region):
-        region = vor.regions[region_index]
-        if not -1 in region and len(region) > 0:
-            polygon = [vor.vertices[j] for j in region]
-            regions.append(polygon)
-            
-            if i in prediction_set_unique:
-                colors.append(highlight_color)  # Use the highlight color for top regions
-            else:
-                colors.append(cmap(0))
+    for i, polygon in enumerate(polygons):    
+        if i in prediction_set_unique:
+            color = highlight_color  # Use the highlight color for top regions
+        else:
+            color = cmap(0)
+        
+        ax.fill(*zip(*polygon), color = color, alpha=0.5)
     
-    voronoi_region_collection = PolyCollection(regions, facecolors=colors, edgecolors='k', alpha=0.6)
-    ax.add_collection(voronoi_region_collection)
     
     ax.scatter(proto_centers[:, 0], proto_centers[:, 1], marker='x', c='red', s=1)
-    plt.xlim(proto_centers[:, 0].min() - 0.1, proto_centers[:, 0].max() + 0.1)
-    plt.ylim(proto_centers[:, 1].min() - 0.1, proto_centers[:, 1].max() + 0.1)
-    plt.title('Probability Distribution over the 2D Space with Voronoi Tessellation')
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
+    ax.set_xlim(proto_centers[:, 0].min() - 0.1, proto_centers[:, 0].max() + 0.1)
+    ax.set_ylim(proto_centers[:, 1].min() - 0.1, proto_centers[:, 1].max() + 0.1)
+    ax.set_title('Probability Distribution over the 2D Space with Voronoi Tessellation')
+    ax.set_xlabel('X-axis')
+    ax.set_ylabel('Y-axis')
 
     # Add colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)

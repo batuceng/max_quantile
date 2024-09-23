@@ -75,11 +75,11 @@ def train(config):
             quant_optimizer.zero_grad()
             log_density_preds = model(inputs)
             log_prob_preds = log_density_preds + torch.log(proto_areas) 
-            # ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], soft_quantized_target) 
+            ce_loss = cross_entropy_loss(log_prob_preds / config['losses']['cross_entropy_temperature'], soft_quantized_target.detach()) 
             # # ce_loss = distance_based_ce(log_prob_preds, targets, quantizer.protos)
 
             #Using l(y,y_pred)*q(y_pred) - tau H(q(y_pred))
-            ce_loss = distance_based_ce(log_prob_preds / config['losses']['cross_entropy_temperature'], targets, quantizer.protos) 
+            # ce_loss = distance_based_ce(log_prob_preds / config['losses']['cross_entropy_temperature'], targets, quantizer.protos) 
             # ce_loss = distance_based_ce(log_prob_preds, targets, quantizer.protos)
             mindist = mindist_loss(targets, quantizer.protos)
             entropy = entropy_loss(log_prob_preds)

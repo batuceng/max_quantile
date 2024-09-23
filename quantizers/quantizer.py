@@ -6,6 +6,7 @@ from itertools import product
 
 from .voronoi import get_voronoi_areas, get_voronoi_boundaries
 from scipy.spatial import ConvexHull, Voronoi
+import pyvoro
 
 class GridQuantizer(nn.Module):
     def __init__(self, y_vals, proto_count_per_dim):
@@ -66,24 +67,66 @@ class GridQuantizer(nn.Module):
         
     # Return area of each proto
     def get_areas(self):
-        if hasattr(self.outer_hull,"points"):
-            outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
+        if self.dims == 1:
+            if hasattr(self.outer_hull,"points"):
+                outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
+            else:
+                # outer_point_list = torch.tensor(self.outer_hull)
+                outer_point_list = np.array(self.outer_hull)
+            return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
+        elif self.dims in (2,3):
+            self.compute_pyvoro_voroni()
+            return np.array(self.volumes)
         else:
-            # outer_point_list = torch.tensor(self.outer_hull)
-            outer_point_list = np.array(self.outer_hull)
-        return get_voronoi_areas(self.protos.detach().cpu().numpy(), outer_point_list)
+            raise ValueError("Unsupported dimensionality for get_areas")
     
     # Return area of each proto
     def get_proto_decision_boundaries(self):
-        if hasattr(self.outer_hull,"points"):
-            outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
-        else:
-            # outer_point_list = torch.tensor(self.outer_hull)
-            outer_point_list = np.array(self.outer_hull)
-        return get_voronoi_boundaries(self.protos.detach().cpu().numpy(), outer_point_list)
-    
+        if self.dims == 1:
+            if hasattr(self.outer_hull,"points"):
+                outer_point_list = self.outer_hull.points[self.outer_hull.vertices]
+            else:
+                # outer_point_list = torch.tensor(self.outer_hull)
+                outer_point_list = np.array(self.outer_hull)
+            return get_voronoi_boundaries(self.protos.detach().cpu().numpy(), outer_point_list)
+        elif self.dims in (2,3):
+            self.compute_pyvoro_voroni()
+            return self.polygons_all
+        
+        else: 
+            raise ValueError("Unsupported dimensionality for get_proto_decision_boundaries")
+
     def get_voronoi_diagram(self):
         return Voronoi(self.protos.detach().cpu().numpy())
+    
+    def compute_pyvoro_voroni(self):
+        if self.dims == 1:
+            pass
+        if self.dims==2:
+            cells = pyvoro.compute_2d_voronoi(self.get_protos_numpy(), [[self.mins[0], self.maxs[0]], [self.mins[1], self.maxs[1]]], 2.0) # 2nd argum is bbox , # 3rd is block size    
+
+        if self.dims == 3:
+            cells = pyvoro.compute_voronoi(self.get_protos_numpy(), [[self.mins[0], self.maxs[0]], [self.mins[1], self.maxs[1]], [self.mins[2], self.maxs[2]]], 2.0)
+
+        self.polygons_all = []
+        self.adjacenst_cells_all = []
+        self.centers = []
+        self.volumes = []
+
+        for i, cell in enumerate(cells):    
+            polygon = cell['vertices']
+            # print(np.array(polygon))
+            # plt.fill(*zip(*polygon), color = color_map[tuple(cell['original'])], alpha=0.5)
+            adjacent_cells = []
+            polygons = []
+            for j, item in enumerate(cell['faces']):
+                adjacent_cells.append(item['adjacent_cell'])
+            
+            self.polygons_all.append(polygon)
+            self.centers.append(cell['original'])
+                
+            self.adjacenst_cells_all.append(adjacent_cells)  
+            self.volumes.append(cell['volume'])
     
     @torch.no_grad()    
     def clamp_protos(self):

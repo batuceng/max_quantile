@@ -11,10 +11,10 @@ losses:
   cross_entropy_temperature: 1.0
   # distance loss
   entropy_weight: 0.0
-  mindist_weight: 0.0
+  mindist_weight: 0.2
   # Repulsion loss
-  repulsion_loss_weight: 0.0
-  repulsion_loss_margin: 0.001
+  repulsion_loss_weight: 0.1
+  repulsion_loss_margin: 0.01
 
   use_softmin_grads : False
 
