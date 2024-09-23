@@ -231,7 +231,56 @@ def convert_string_columns_to_categorical(df):
     return df_transformed, ct
   
 
+def unconditional_1d_data_generator():
+  np.random.seed(42)
 
+  # Generate samples from N(1, 3)
+  data1 = np.random.normal(loc=0.75, scale=0.05, size=11000)
+  # Generate samples from N(4, 1)
+  data2 = np.random.normal(loc=0, scale=0.002, size=1)
+  # Generate samples from N(7, 2)
+  data3 = np.random.normal(loc=-0.75, scale=0.05, size=9000)
+  # Combine the data
+  Y = np.concatenate([data1, data2, data3])
+  X = np.zeros((len(Y), 1))
+  
+  # Split the data
+  from sklearn.model_selection import train_test_split
+  train_x, test_x, train_y, test_y = train_test_split(X, Y, test_size=0.2, random_state=1)
+  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=1)
+  
+  # Normalize the data
+  scaler_x = StandardScaler()
+  scaler_y = StandardScaler()
+  train_x = scaler_x.fit_transform(train_x)
+  train_y = scaler_y.fit_transform(train_y.reshape(-1, 1))
+  test_x = scaler_x.transform(test_x)
+  test_y = scaler_y.transform(test_y.reshape(-1, 1))
+  cal_x = scaler_x.transform(cal_x)
+  cal_y = scaler_y.transform(cal_y.reshape(-1, 1))
+  
+  # Save the data
+  savedir = './raw/Unconditional_1d_data'
+  os.makedirs(savedir, exist_ok=True)
+  # np.save(os.path.join(savedir, 'data.npy'), np.stack([X,Y]))
+  joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
+  joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
+
+  all_data = {
+    'train_x': train_x,
+    'train_y': train_y,
+    'test_x': test_x,
+    'test_y': test_y,
+    'cal_x': cal_x,
+    'cal_y': cal_y,
+  }
+  
+  np.save(os.path.join(savedir, 'all_data.npy'), all_data)
+
+
+  
+
+  
 
 
 # %%
@@ -255,8 +304,9 @@ if __name__ == '__main__':
   if not os.path.exists('./raw/Solar_Flare'): # 3d 
     prepare_any_dataset(89,'Solar_Flare')
     print("Saved 2d Solar_Flare Data!")
-  
-
+  if not os.path.exists('./raw/Unconditional_1d_data'):
+    unconditional_1d_data_generator()
+    print("Saved 1d Unconditional Data!")
 
 
 # %%
