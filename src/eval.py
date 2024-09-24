@@ -245,7 +245,7 @@ def get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode,
     if usage_mode == "bincountbased":
         prototype_usage = torch.bincount(quantized_target_index, minlength=quantizer.protos.size(0))
     elif usage_mode == "softlabelbased":
-        prototype_usage = soft_quantized_target_index.sum(dim=1)
+        prototype_usage = soft_quantized_target_index.sum(dim=0)
     else: raise NotImplementedError(f"No mode {usage_mode}")
     prototype_usage_density = prototype_usage / prototype_usage.sum()
     return prototype_usage_density

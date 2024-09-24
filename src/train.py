@@ -67,13 +67,18 @@ def train(config):
         running_Repulsion_loss = 0.0
         running_entropy_loss = 0.0
         
-        usage_mode = "bincountbased"
+        usage_mode = "softlabelbased"
+        every_n_epoch_add_remove = 50
+        split_density_threshold = 0.0 # (0, 1)
+        remove_density_threshold = 0.0 # (0,1)   1% = 0.01
         assert usage_mode in ["bincountbased", "softlabelbased"]
         # Remove Protos
-        if (((epoch+1)%40) == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
+        if (((epoch+1)%every_n_epoch_add_remove) == 0) and \
+            (epoch < (config['train']['epochs'])*0.8) and \
+                (config['quantizer']['quantizer_type'] == 'voronoi'):
             with torch.no_grad():
                 prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
-                unused_proto_indices = torch.where(prototype_usage_density <= 0.001)[0]
+                unused_proto_indices = torch.where(prototype_usage_density <= remove_density_threshold)[0]
                 # unused_proto_indices.drop(np.unique(*adjacencies))
                 quantizer.remove_proto(unused_proto_indices)
                 model.remove_proto(unused_proto_indices)
@@ -84,10 +89,12 @@ def train(config):
                 quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
                 print(f"{len(unused_proto_indices)} Protos Removed!")
         # Add Protos
-        if ((epoch+21)%40 == 0) and (config['quantizer']['quantizer_type'] == 'voronoi'):
+        if ((epoch+1+(every_n_epoch_add_remove//2))%every_n_epoch_add_remove == 0) and \
+            (epoch < (config['train']['epochs'])*0.8) and \
+                (config['quantizer']['quantizer_type'] == 'voronoi'):
             with torch.no_grad():
                 prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
-                overused_proto_indices = torch.where(prototype_usage_density > 0.01)[0]
+                overused_proto_indices = torch.where(prototype_usage_density > split_density_threshold)[0]
                 quantizer.add_proto(overused_proto_indices)
                 model.add_proto(overused_proto_indices)
                 # Fix quantizers
