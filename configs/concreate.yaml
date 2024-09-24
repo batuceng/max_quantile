@@ -1,7 +1,7 @@
 train:
   batch_size: -1
   learning_rate: 0.001
-  epochs: 449
+  epochs: 500
   optimizer: 'Adam'
   quant_learning_rate: 0.01
 
@@ -25,10 +25,15 @@ model:
 quantizer:
   quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
 
+add_remove_proto:
+  usage_mode: softlabelbased #"bincountbased", "softlabelbased"
+  every_n_epoch: 100
+  split_density_threshold: 0.01
+  remove_density_threshold: 0.001
+  
 eval:
   conformal_mode : "prob_th" # dens_th | prob_th
 
 log_dir: './logs'
 dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
-# dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'
 seed: 42

@@ -67,42 +67,43 @@ def train(config):
         running_Repulsion_loss = 0.0
         running_entropy_loss = 0.0
         
-        usage_mode = "softlabelbased"
-        every_n_epoch_add_remove = 50
-        split_density_threshold = 0.0 # (0, 1)
-        remove_density_threshold = 0.0 # (0,1)   1% = 0.01
-        assert usage_mode in ["bincountbased", "softlabelbased"]
+        usage_mode = config['add_remove_proto']['usage_mode']
+        every_n_epoch_add_remove = config['add_remove_proto']['every_n_epoch']
+        split_density_threshold = config['add_remove_proto']['split_density_threshold'] # (0, 1)
+        remove_density_threshold = config['add_remove_proto']['remove_density_threshold'] # (0,1)   1% = 0.01
+        assert usage_mode in ["bincountbased", "softlabelbased","none"]
         # Remove Protos
-        if (((epoch+1)%every_n_epoch_add_remove) == 0) and \
-            (epoch < (config['train']['epochs'])*0.8) and \
-                (config['quantizer']['quantizer_type'] == 'voronoi'):
-            with torch.no_grad():
-                prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
-                unused_proto_indices = torch.where(prototype_usage_density <= remove_density_threshold)[0]
-                # unused_proto_indices.drop(np.unique(*adjacencies))
-                quantizer.remove_proto(unused_proto_indices)
-                model.remove_proto(unused_proto_indices)
-                # Fix quantizers
-                remove_param_from_optimizer(optimizer, 1) # Clear model.head from optimizer
-                optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
-                remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
-                quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
-                print(f"{len(unused_proto_indices)} Protos Removed!")
-        # Add Protos
-        if ((epoch+1+(every_n_epoch_add_remove//2))%every_n_epoch_add_remove == 0) and \
-            (epoch < (config['train']['epochs'])*0.8) and \
-                (config['quantizer']['quantizer_type'] == 'voronoi'):
-            with torch.no_grad():
-                prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device)
-                overused_proto_indices = torch.where(prototype_usage_density > split_density_threshold)[0]
-                quantizer.add_proto(overused_proto_indices)
-                model.add_proto(overused_proto_indices)
-                # Fix quantizers
-                remove_param_from_optimizer(optimizer, 1) # Clear model.head from optimizer
-                optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
-                remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
-                quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
-                print(f"{len(overused_proto_indices)} Protos Added!")
+        if usage_mode != "none":
+            if (((epoch+1)%every_n_epoch_add_remove) == 0) and \
+                (epoch < (config['train']['epochs'])*0.8) and \
+                    (config['quantizer']['quantizer_type'] == 'voronoi'):
+                with torch.no_grad():
+                    prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode,0.2, device)
+                    unused_proto_indices = torch.where(prototype_usage_density <= remove_density_threshold)[0]
+                    # unused_proto_indices.drop(np.unique(*adjacencies))
+                    quantizer.remove_proto(unused_proto_indices)
+                    model.remove_proto(unused_proto_indices)
+                    # Fix quantizers
+                    remove_param_from_optimizer(optimizer, 1) # Clear model.head from optimizer
+                    optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
+                    remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
+                    quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
+                    print(f"{len(unused_proto_indices)} Protos Removed!")
+            # Add Protos
+            if ((epoch+1+(every_n_epoch_add_remove//2))%every_n_epoch_add_remove == 0) and \
+                (epoch < (config['train']['epochs'])*0.8) and \
+                    (config['quantizer']['quantizer_type'] == 'voronoi'):
+                with torch.no_grad():
+                    prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode,0.1, device)
+                    overused_proto_indices = torch.where(prototype_usage_density > split_density_threshold)[0]
+                    quantizer.add_proto(overused_proto_indices)
+                    model.add_proto(overused_proto_indices)
+                    # Fix quantizers
+                    remove_param_from_optimizer(optimizer, 1) # Clear model.head from optimizer
+                    optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
+                    remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
+                    quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
+                    print(f"{len(overused_proto_indices)} Protos Added!")
                 
         # Wrap train_data_loader with tqdm for batch-level progress
         for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}")):
@@ -178,6 +179,7 @@ def train(config):
         f.write(f'Coverage 0.1: {covarage_01}, PINAW 0.1: {pinaw_01}\n')
         f.write(f'Coverage 0.5: {covarage_05}, PINAW 0.5: {pinaw_05}\n')
         f.write(f'Coverage 0.9: {covarage_09}, PINAW 0.9: {pinaw_09}\n')
+        f.write(f'Final Proto Count: {len(quantizer.protos)}\n')
     
     writer.add_scalar('Coverage/0.1', covarage_01, epoch)
     writer.add_scalar('PINAW/0.1', pinaw_01, epoch)

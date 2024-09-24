@@ -25,6 +25,13 @@ model:
 quantizer:
   quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
 
+add_remove_proto:
+  usage_mode: softlabelbased #"bincountbased", "softlabelbased"
+  every_n_epoch: 40
+  split_density_threshold: 0.01
+  remove_density_threshold: 0.001
+  
+
 eval:
   conformal_mode : "dens_th" # dens_th | prob_th
 

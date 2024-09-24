@@ -58,7 +58,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
     # 1. Calculate qhat_prob by prob, expand regions until qhat_prob reached sorted by densities (Calib: %90, %85 -> %85 - Max Dens First, threshould by prob)
     # 1. Calculate qhat_dens by prob, expand regions until qhat_prob reached sorted by densities (Calib: %90, 12 -> 12 - Max Dens First, threshould by prob)
     # mode = "prob_th"
-    print(f"Conformal mode: {mode}")
+    # print(f"Conformal mode: {mode}")
     mode in ["prob_th", "dens_th"]
     if mode == "prob_th":
         # cal_pi = torch.argsort(cal_prob_preds, dim=1, descending=True)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
@@ -69,6 +69,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
         cal_scores = cal_prob_cumsum[torch.arange(len(cal_prob_preds)), cal_proto_indices_in_sorted] # values of the true class in the cumulative sum
         n = cal_targets.shape[0] # number of samples
         quantile_threshold = np.quantile(cal_scores.detach().cpu().numpy(), np.ceil((n + 1) * (1 - alpha)) / n, interpolation="higher") # quantile threshold
+        alpha = 1-alpha
     elif mode == "dens_th":
         # cal_log_density_preds_sorted, cal_log_density_preds_sorted_indices = torch.sort(cal_log_density_preds, dim=1, descending=True)
         # cal_proto_indices_in_sorted = cal_log_density_preds_sorted_indices.argsort(dim=1)[torch.arange(len(cal_prob_preds)), cal_proto_indices] # true class index in the sorted array
@@ -98,7 +99,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
         prediction_set = torch.where(test_log_density_preds>=quantile_threshold, torch.arange(test_log_density_preds.shape[1], device=device), -1)
     # Calculate the coverage
     coverage = torch.mean((prediction_set == test_proto_indices.unsqueeze(1)).sum(dim=1).float())
-    print(f"Coverage of the data by the conformal prediction set: {100*coverage:.2f}%")
+    # print(f"Coverage of the data by the conformal prediction set: {100*coverage:.2f}%")
 
     region_set = []
     for i in range(len(prediction_set)):
@@ -107,7 +108,9 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
         region_set.append(region_area)
     
     pinaw_score = np.mean(region_set)
-    print(f"PINAW Score: {pinaw_score:.5f}")
+    # print(f"PINAW Score: {pinaw_score:.5f}")
+    
+    print(f'coverage: {coverage:.5f}, PINAW: {pinaw_score:.5f}')
     # Check the input_dim and output_dim
     input_dim = test_inputs.shape[1]
     output_dim = test_targets.shape[1]
@@ -237,11 +240,11 @@ def visualize_protos_1d(quantizer, cal_labels, prediction_set, save_path):
     plt.scatter(protos_np.flatten(), [0.1]*len(protos_np),c='red', marker='x', s=100)
     plt.savefig(save_path)
 
-def get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, device):
+def get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode, temp,device):
     log_density_preds, targets, inputs = inference(train_data_loader, model, device)
     adjacencies, proto_areas = quantizer.get_adjancencies_and_volumes()
     qdist, quantized_target_index = quantizer.quantize(targets)
-    soft_quantized_target_index = quantizer.soft_quantize(targets)
+    soft_quantized_target_index = quantizer.soft_quantize(targets,temp=temp)
     if usage_mode == "bincountbased":
         prototype_usage = torch.bincount(quantized_target_index, minlength=quantizer.protos.size(0))
     elif usage_mode == "softlabelbased":
