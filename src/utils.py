@@ -33,6 +33,18 @@ def parse_arguments():
     parser.add_argument('--epochs', type=int, help="Override the number of epochs in the config.")
     parser.add_argument('--batch_size', type=int, help="Override the batch size in the config.")
     parser.add_argument('--run_id', type=int, default=1, help="Unique identifier for the training run.")
+    
+    parser.add_argument('--proto_split_density_threshold', type=float, help="Override the split density threshold in the config.")
+    parser.add_argument('--proto_remove_density_threshold', type=float, help="Override the remove density threshold in the config.")
+    parser.add_argument('--add_remove_usage_mode', type=str, help="Override the usage mode in the config.")
+    parser.add_argument('--repulsion_loss_margin', type=float, help="Override the repulsion loss margin in the config.")
+    parser.add_argument('--add_remove_every_n_epoch', type=int, help="Override the add/remove every n epoch in the config.")
+    
+    parser.add_argument('--device', type=str, default='cuda', help="Device to use for training.")
+    parser.add_argument('--dataset_path', type=str, default = None, help="Path to the dataset.")
+    
+    # quantizer : proto_split_density_threshold, proto_remove_density_threshold, ,usage_mode
+    # losses: repulsion_loss_margin
     args = parser.parse_args()
 
     return args
@@ -47,13 +59,29 @@ def update_config_with_args(config, args):
         config['train']['epochs'] = args.epochs
     if args.batch_size is not None:
         config['train']['batch_size'] = args.batch_size
+    if args.proto_split_density_threshold is not None:
+        config['quantizer']['proto_split_density_threshold'] = args.proto_split_density_threshold
+    if args.proto_remove_density_threshold is not None:
+        config['quantizer']['proto_remove_density_threshold'] = args.proto_remove_density_threshold
+    if args.add_remove_usage_mode is not None:
+        config['quantizer']['add_remove_usage_mode'] = args.add_remove_usage_mode
+    if args.repulsion_loss_margin is not None:
+        config['losses']['repulsion_loss_margin'] = args.repulsion_loss_margin        
+    if args.add_remove_every_n_epoch is not None:
+        config['quantizer']['add_remove_every_n_epoch'] = args.add_remove_every_n_epoch
+    if args.device is not None:
+        config['device'] = args.device
+    if args.dataset_path is not None:
+        config['dataset_path'] = args.dataset_path
+    
     config['run_id'] = args.run_id
+    
     return config
 
 def prepare_training():
     """Prepare the training configuration by loading the config file and parsing CLI arguments."""
     args = parse_arguments()  # Step 1: Parse command-line arguments
-    print(os.getcwd())
+    #print(os.getcwd())
     config = load_config(args.config)  # Step 2: Load the YAML configuration file
     config = update_config_with_args(config, args)  # Step 3: Override config with CLI arguments
     return config

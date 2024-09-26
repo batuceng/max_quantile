@@ -7,12 +7,12 @@ import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import DataLoader
+# from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from models.model import ProtoClassifier
-from data.dataset import CustomDataset
+from data.dataset import CustomDataset,CustomDataloader
 from src.utils import prepare_training, remove_param_from_optimizer
 from quantizers.quantizer import VoronoiQuantizer,GridQuantizer
 from src.eval import eval_model, get_prototype_usage_density
@@ -22,11 +22,11 @@ import yaml
 
 def train(config):
     # Load dataset
-    train_dataset = CustomDataset(config['dataset_path'],mode='train')
+    train_dataset = CustomDataset(config['dataset_path'],mode='train',device = config['device'])
     bs = config['train']['batch_size'] if config['train']['batch_size']!=-1 else train_dataset.__len__()
-    train_data_loader = DataLoader(train_dataset, batch_size=bs, shuffle=True)
+    train_data_loader = CustomDataloader(train_dataset, batch_size=bs, shuffle=False)
     
-    device = torch.device('cuda')
+    device = config["device"]
 
     # Initialize model, loss function, and optimizer
     model = ProtoClassifier(config['model']['input_dim'], config['model']['output_dim'], config['model']['proto_count_per_dim']).to(device)
@@ -34,9 +34,9 @@ def train(config):
     cross_entropy_loss = nn.CrossEntropyLoss()
     
     if config['quantizer']['quantizer_type'] == 'voronoi':
-        quantizer = VoronoiQuantizer(train_dataset.data_y, config['model']['proto_count_per_dim']).to(device)
+        quantizer = VoronoiQuantizer(train_dataset.data_y.detach().cpu().numpy(), config['model']['proto_count_per_dim']).to(device)
     elif config['quantizer']['quantizer_type'] == 'grid':
-        quantizer = GridQuantizer(train_dataset.data_y, config['model']['proto_count_per_dim']).to(device)
+        quantizer = GridQuantizer(train_dataset.data_y.detach().cpu().numpy(), config['model']['proto_count_per_dim']).to(device)
     else:
         raise NotImplementedError(f"Quantizer type {config['quantizer']['quantizer_type']} not implemented.")
     
@@ -48,7 +48,12 @@ def train(config):
     quant_optimizer = getattr(optim, config['train']['optimizer'])(quantizer.parameters() , lr=config['train']['quant_learning_rate'], weight_decay=0)
     # it should contain be under the dataset folder and inside the dataset folder it should have the time folder 
     time_str = time.strftime("%Y%m%d-%H%M%S")
-    experiement_path = os.path.join(config['log_dir'],config['dataset_path'].split('/')[-2],config['quantizer']['quantizer_type'],time_str)
+    if config['quantizer']['quantizer_type'] == "grid":
+        experiement_path = os.path.join(config['log_dir'],config['dataset_path'].split('/')[-3],config['dataset_path'].split('/')[-2],config['quantizer']['quantizer_type'],time_str)
+    elif config['quantizer']['quantizer_type'] == "voronoi":
+        experiement_path = os.path.join(config['log_dir'],config['dataset_path'].split('/')[-3],config['dataset_path'].split('/')[-2],config['quantizer']['quantizer_type'],config['quantizer']['add_remove_usage_mode'],time_str)
+        
+    
     os.makedirs(experiement_path,exist_ok=True)
     
     writer = SummaryWriter(log_dir=experiement_path)
@@ -67,19 +72,19 @@ def train(config):
         running_Repulsion_loss = 0.0
         running_entropy_loss = 0.0
         
-        usage_mode = config['add_remove_proto']['usage_mode']
-        every_n_epoch_add_remove = config['add_remove_proto']['every_n_epoch']
-        split_density_threshold = config['add_remove_proto']['split_density_threshold'] # (0, 1)
-        remove_density_threshold = config['add_remove_proto']['remove_density_threshold'] # (0,1)   1% = 0.01
+        usage_mode = config['quantizer']['add_remove_usage_mode']
+        add_remove_every_n_epoch_add_remove = config['quantizer']['add_remove_every_n_epoch']
+        proto_split_density_threshold = config['quantizer']['proto_split_density_threshold'] # (0, 1)
+        proto_remove_density_threshold = config['quantizer']['proto_remove_density_threshold'] # (0,1)   1% = 0.01
         assert usage_mode in ["bincountbased", "softlabelbased","none"]
         # Remove Protos
         if usage_mode != "none":
-            if (((epoch+1)%every_n_epoch_add_remove) == 0) and \
-                (epoch < (config['train']['epochs'])*0.8) and \
+            if (((epoch+1)%add_remove_every_n_epoch_add_remove) == 0) and \
+                (epoch < (config['train']['epochs'])*0.7) and \
                     (config['quantizer']['quantizer_type'] == 'voronoi'):
                 with torch.no_grad():
                     prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode,0.2, device)
-                    unused_proto_indices = torch.where(prototype_usage_density <= remove_density_threshold)[0]
+                    unused_proto_indices = torch.where(prototype_usage_density <= proto_remove_density_threshold)[0]
                     # unused_proto_indices.drop(np.unique(*adjacencies))
                     quantizer.remove_proto(unused_proto_indices)
                     model.remove_proto(unused_proto_indices)
@@ -88,14 +93,15 @@ def train(config):
                     optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
                     remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
                     quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
-                    print(f"{len(unused_proto_indices)} Protos Removed!")
+                    if config['verbose']:
+                        print(f"{len(unused_proto_indices)} Protos Removed!")
             # Add Protos
-            if ((epoch+1+(every_n_epoch_add_remove//2))%every_n_epoch_add_remove == 0) and \
-                (epoch < (config['train']['epochs'])*0.8) and \
+            if ((epoch+1+(add_remove_every_n_epoch_add_remove//2))%add_remove_every_n_epoch_add_remove == 0) and \
+                (epoch < (config['train']['epochs'])*0.7) and \
                     (config['quantizer']['quantizer_type'] == 'voronoi'):
                 with torch.no_grad():
                     prototype_usage_density = get_prototype_usage_density(train_data_loader, model, quantizer, usage_mode,0.1, device)
-                    overused_proto_indices = torch.where(prototype_usage_density > split_density_threshold)[0]
+                    overused_proto_indices = torch.where(prototype_usage_density > proto_split_density_threshold)[0]
                     quantizer.add_proto(overused_proto_indices)
                     model.add_proto(overused_proto_indices)
                     # Fix quantizers
@@ -103,10 +109,12 @@ def train(config):
                     optimizer.add_param_group({'params': model.head.parameters(), 'lr':config['train']['learning_rate']}) # Clear model.head from optimizer
                     remove_param_from_optimizer(quant_optimizer, 0) # Clear model.head from optimizer
                     quant_optimizer.add_param_group({'params': quantizer.parameters(), 'lr':config['train']['quant_learning_rate'], 'weight_decay':0}) # Clear model.head from optimizer
-                    print(f"{len(overused_proto_indices)} Protos Added!")
+                    if config['verbose']:
+                        print(f"{len(overused_proto_indices)} Protos Added!")
                 
         # Wrap train_data_loader with tqdm for batch-level progress
-        for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}")):
+        
+        for i, (inputs, targets) in enumerate(tqdm(train_data_loader, desc=f"Epoch {epoch+1}/{config['train']['epochs']}",disable=not config['verbose'])):
             inputs, targets = inputs.to(device), targets.to(device)
             proto_areas = torch.tensor(quantizer.get_areas_voronoi()).to(device)
             qdist, quantized_target_index = quantizer.quantize(targets)
@@ -170,10 +178,14 @@ def train(config):
             },
             epoch)
 
-    print(f"Final Proto Count: {len(quantizer.protos)}")    
-    covarage_01,pinaw_01 = eval_model(config, model,quantizer,alpha=0.1,folder=experiement_path,mode = config["eval"]["conformal_mode"])
-    covarage_05,pinaw_05 = eval_model(config, model,quantizer,alpha=0.5,folder=experiement_path,mode = config["eval"]["conformal_mode"])
-    covarage_09,pinaw_09 = eval_model(config, model,quantizer,alpha=0.9,folder=experiement_path,mode = config["eval"]["conformal_mode"])
+    
+    if config['verbose']:
+        print(f"Final Proto Count: {len(quantizer.protos)}")    
+    
+    print(f"Experiment Path: {experiement_path}")
+    covarage_01,pinaw_01 = eval_model(config, model,quantizer,alpha=0.1,folder=experiement_path,mode = config["eval"]["conformal_mode"],device=device)
+    covarage_05,pinaw_05 = eval_model(config, model,quantizer,alpha=0.5,folder=experiement_path,mode = config["eval"]["conformal_mode"],device=device)
+    covarage_09,pinaw_09 = eval_model(config, model,quantizer,alpha=0.9,folder=experiement_path,mode = config["eval"]["conformal_mode"],device=device)
     # write a txt to covarage and pinaw
     with open(os.path.join(experiement_path,'metrics.txt'),'w') as f:
         f.write(f'Coverage 0.1: {covarage_01}, PINAW 0.1: {pinaw_01}\n')

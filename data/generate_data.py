@@ -6,13 +6,29 @@ import os
 from ucimlrepo import fetch_ucirepo 
 from sklearn.preprocessing import StandardScaler
 import joblib
+import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split
 
 
-np.random.seed(0)
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser(description='Generate data for the experiments')
+    parser.add_argument('--dataset', type=str, default='Unconditional_2d_data', help='Name of the dataset to generate')
+    parser.add_argument('--seed', type=int, default=0, help='Seed for generating the data')
+    return parser.parse_args()
+
+
 
 #%%
+
 # Centers of the Gaussians
-def unconditional_2d_data_generator():
+def unconditional_2d_data_generator(seed):
+  
+  # create always the same data
+  np.random.seed(42)
+  
   means = [(0, 0), 
           (3, 3), 
           (-3, -4)]  
@@ -52,15 +68,14 @@ def unconditional_2d_data_generator():
   # Normalize the combined distribution
   Z /= np.sum(Z)
 
-  savedir = './raw/Unconditional_2d_data'
+  savedir = f'./raw/Unconditional_2d_data/seed_{seed}'
   os.makedirs(savedir, exist_ok=True) 
   np.save(os.path.join(savedir, 'pdf.npy'), np.stack([X,Y,Z]))
 
   # split the data
-  from sklearn.model_selection import train_test_split
-  train_x, test_x, train_y, test_y = train_test_split(np.zeros((len(data_samples),1)), data_samples, test_size=0.2, random_state=1)
-  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=1)
-
+  
+  train_x, test_x, train_y, test_y = train_test_split(np.zeros((len(data_samples),1)), data_samples, test_size=0.2, random_state=seed)
+  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=seed)
 
   scaler_x = StandardScaler()
   scaler_y = StandardScaler()
@@ -105,23 +120,22 @@ def unconditional_2d_data_generator():
   plt.ylabel('Y-axis')
   plt.savefig(os.path.join(savedir, 'pdf_sampled.pdf'))
   plt.show()
-def prepare_any_dataset(dataset_id, name): 
+  
+  
+def prepare_any_dataset(dataset_id, name,seed): 
     import numpy as np
     import pandas as pd
     import os
     import joblib
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.model_selection import train_test_split
-    from sklearn.preprocessing import OneHotEncoder
-    from sklearn.compose import ColumnTransformer
+    
 
     dataset = fetch_ucirepo(id=dataset_id) 
     X = dataset.data.features
     y = dataset.data.targets
 
     # Split the data
-    train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=1)
-    test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=1)
+    train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=seed)
+    test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=seed)
 
     # Check if train_x has any string values
     if np.any([isinstance(x, str) for x in train_x.values.flatten()]):
@@ -167,17 +181,13 @@ def prepare_any_dataset(dataset_id, name):
     # Save the metadata of the dataset
     
     
-    savedir = f'./raw/{name}'
+    savedir = f'./raw/{name}/seed_{seed}'
     os.makedirs(savedir, exist_ok=True)
     
     with open(f'./raw/{name}/metadata.txt', 'w') as f:
         f.write(f'Train Data Shape: {train_x.shape}, {train_y.shape}\n')
         f.write(f'Test Data Shape: {test_x.shape}, {test_y.shape}\n')
         f.write(f'Calibration Data Shape: {cal_x.shape}, {cal_y.shape}\n')
-        
-    
-    
-    # Save directory
     
     
     # Save scalers and transformer
@@ -231,9 +241,8 @@ def convert_string_columns_to_categorical(df):
     return df_transformed, ct
   
 
-def unconditional_1d_data_generator():
+def unconditional_1d_data_generator(seed):
   np.random.seed(42)
-
   # Generate samples from N(1, 3)
   data1 = np.random.normal(loc=0.75, scale=0.05, size=11000)
   # Generate samples from N(4, 1)
@@ -245,9 +254,8 @@ def unconditional_1d_data_generator():
   X = np.zeros((len(Y), 1))
   
   # Split the data
-  from sklearn.model_selection import train_test_split
-  train_x, test_x, train_y, test_y = train_test_split(X, Y, test_size=0.2, random_state=1)
-  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=1)
+  train_x, test_x, train_y, test_y = train_test_split(X, Y, test_size=0.2, random_state=seed)
+  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=seed)
   
   # Normalize the data
   scaler_x = StandardScaler()
@@ -260,7 +268,7 @@ def unconditional_1d_data_generator():
   cal_y = scaler_y.transform(cal_y.reshape(-1, 1))
   
   # Save the data
-  savedir = './raw/Unconditional_1d_data'
+  savedir = f'./raw/Unconditional_1d_data/seed_{seed}'
   os.makedirs(savedir, exist_ok=True)
   # np.save(os.path.join(savedir, 'data.npy'), np.stack([X,Y]))
   joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
@@ -278,35 +286,280 @@ def unconditional_1d_data_generator():
   np.save(os.path.join(savedir, 'all_data.npy'), all_data)
 
 
+
+
+
+def prepare_meps_data(seed):
+
+  ##############################################################################
+  # MEPS 19
+  ##############################################################################
+  # Load the processed meps_19_reg.csv, extract features X and response y
+  df = pd.read_csv('meps_19_reg.csv')
+  column_names = df.columns
+  response_name = "UTILIZATION_reg"
+  column_names = column_names[column_names!=response_name]
+  column_names = column_names[column_names!="Unnamed: 0"]
+
+  col_names = ['AGE', 'PCS42', 'MCS42', 'K6SUM42', 'PERWT15F', 'REGION=1',
+            'REGION=2', 'REGION=3', 'REGION=4', 'SEX=1', 'SEX=2', 'MARRY=1',
+            'MARRY=2', 'MARRY=3', 'MARRY=4', 'MARRY=5', 'MARRY=6', 'MARRY=7',
+            'MARRY=8', 'MARRY=9', 'MARRY=10', 'FTSTU=-1', 'FTSTU=1', 'FTSTU=2',
+            'FTSTU=3', 'ACTDTY=1', 'ACTDTY=2', 'ACTDTY=3', 'ACTDTY=4',
+            'HONRDC=1', 'HONRDC=2', 'HONRDC=3', 'HONRDC=4', 'RTHLTH=-1',
+            'RTHLTH=1', 'RTHLTH=2', 'RTHLTH=3', 'RTHLTH=4', 'RTHLTH=5',
+            'MNHLTH=-1', 'MNHLTH=1', 'MNHLTH=2', 'MNHLTH=3', 'MNHLTH=4',
+            'MNHLTH=5', 'HIBPDX=-1', 'HIBPDX=1', 'HIBPDX=2', 'CHDDX=-1',
+            'CHDDX=1', 'CHDDX=2', 'ANGIDX=-1', 'ANGIDX=1', 'ANGIDX=2',
+            'MIDX=-1', 'MIDX=1', 'MIDX=2', 'OHRTDX=-1', 'OHRTDX=1', 'OHRTDX=2',
+            'STRKDX=-1', 'STRKDX=1', 'STRKDX=2', 'EMPHDX=-1', 'EMPHDX=1',
+            'EMPHDX=2', 'CHBRON=-1', 'CHBRON=1', 'CHBRON=2', 'CHOLDX=-1',
+            'CHOLDX=1', 'CHOLDX=2', 'CANCERDX=-1', 'CANCERDX=1', 'CANCERDX=2',
+            'DIABDX=-1', 'DIABDX=1', 'DIABDX=2', 'JTPAIN=-1', 'JTPAIN=1',
+            'JTPAIN=2', 'ARTHDX=-1', 'ARTHDX=1', 'ARTHDX=2', 'ARTHTYPE=-1',
+            'ARTHTYPE=1', 'ARTHTYPE=2', 'ARTHTYPE=3', 'ASTHDX=1', 'ASTHDX=2',
+            'ADHDADDX=-1', 'ADHDADDX=1', 'ADHDADDX=2', 'PREGNT=-1', 'PREGNT=1',
+            'PREGNT=2', 'WLKLIM=-1', 'WLKLIM=1', 'WLKLIM=2', 'ACTLIM=-1',
+            'ACTLIM=1', 'ACTLIM=2', 'SOCLIM=-1', 'SOCLIM=1', 'SOCLIM=2',
+            'COGLIM=-1', 'COGLIM=1', 'COGLIM=2', 'DFHEAR42=-1', 'DFHEAR42=1',
+            'DFHEAR42=2', 'DFSEE42=-1', 'DFSEE42=1', 'DFSEE42=2',
+            'ADSMOK42=-1', 'ADSMOK42=1', 'ADSMOK42=2', 'PHQ242=-1', 'PHQ242=0',
+            'PHQ242=1', 'PHQ242=2', 'PHQ242=3', 'PHQ242=4', 'PHQ242=5',
+            'PHQ242=6', 'EMPST=-1', 'EMPST=1', 'EMPST=2', 'EMPST=3', 'EMPST=4',
+            'POVCAT=1', 'POVCAT=2', 'POVCAT=3', 'POVCAT=4', 'POVCAT=5',
+            'INSCOV=1', 'INSCOV=2', 'INSCOV=3', 'RACE']
+
+  y = df[response_name].values
+  X = df[col_names].values
+
+  # Split the data
+  train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=seed)
+  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=seed)
   
+  # Normalize the data
+  scaler_x = StandardScaler()
+  scaler_y = StandardScaler()
+  train_x = scaler_x.fit_transform(train_x)
+  train_y = scaler_y.fit_transform(train_y.reshape(-1, 1))
+  test_x = scaler_x.transform(test_x)
+  test_y = scaler_y.transform(test_y.reshape(-1, 1))
+  cal_x = scaler_x.transform(cal_x)
+  cal_y = scaler_y.transform(cal_y.reshape(-1, 1))
+  
+  # Save the data
+  savedir = f'./raw/MEPS_19/seed_{seed}'
+  os.makedirs(savedir, exist_ok=True)
+  # np.save(os.path.join(savedir, 'data.npy'), np.stack([X,Y]))
+  joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
+  joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
+  
+  all_data = {
+    'train_x': train_x,
+    'train_y': train_y,
+    'test_x': test_x,
+    'test_y': test_y,
+    'cal_x': cal_x,
+    'cal_y': cal_y,
+  }
+  
+  np.save(os.path.join(savedir, 'all_data.npy'), all_data)
+  
+  # Save the metadata of the dataset
+  with open(f'./raw/MEPS_19/metadata.txt', 'w') as f:
+    f.write(f'Train Data Shape: {train_x.shape}, {train_y.shape}\n')
+    f.write(f'Test Data Shape: {test_x.shape}, {test_y.shape}\n')
+    f.write(f'Calibration Data Shape: {cal_x.shape}, {cal_y.shape}\n')
+    
+    
+  ##############################################################################
+  # MEPS 20
+  ##############################################################################
+
+  # Load the processed meps_20_reg.csv, extract features X and response y
+  df = pd.read_csv('meps_20_reg.csv')
+  column_names = df.columns
+  response_name = "UTILIZATION_reg"
+  column_names = column_names[column_names!=response_name]
+  column_names = column_names[column_names!="Unnamed: 0"]
+
+  col_names = ['AGE', 'PCS42', 'MCS42', 'K6SUM42', 'PERWT15F', 'REGION=1',
+            'REGION=2', 'REGION=3', 'REGION=4', 'SEX=1', 'SEX=2', 'MARRY=1',
+            'MARRY=2', 'MARRY=3', 'MARRY=4', 'MARRY=5', 'MARRY=6', 'MARRY=7',
+            'MARRY=8', 'MARRY=9', 'MARRY=10', 'FTSTU=-1', 'FTSTU=1', 'FTSTU=2',
+            'FTSTU=3', 'ACTDTY=1', 'ACTDTY=2', 'ACTDTY=3', 'ACTDTY=4',
+            'HONRDC=1', 'HONRDC=2', 'HONRDC=3', 'HONRDC=4', 'RTHLTH=-1',
+            'RTHLTH=1', 'RTHLTH=2', 'RTHLTH=3', 'RTHLTH=4', 'RTHLTH=5',
+            'MNHLTH=-1', 'MNHLTH=1', 'MNHLTH=2', 'MNHLTH=3', 'MNHLTH=4',
+            'MNHLTH=5', 'HIBPDX=-1', 'HIBPDX=1', 'HIBPDX=2', 'CHDDX=-1',
+            'CHDDX=1', 'CHDDX=2', 'ANGIDX=-1', 'ANGIDX=1', 'ANGIDX=2',
+            'MIDX=-1', 'MIDX=1', 'MIDX=2', 'OHRTDX=-1', 'OHRTDX=1', 'OHRTDX=2',
+            'STRKDX=-1', 'STRKDX=1', 'STRKDX=2', 'EMPHDX=-1', 'EMPHDX=1',
+            'EMPHDX=2', 'CHBRON=-1', 'CHBRON=1', 'CHBRON=2', 'CHOLDX=-1',
+            'CHOLDX=1', 'CHOLDX=2', 'CANCERDX=-1', 'CANCERDX=1', 'CANCERDX=2',
+            'DIABDX=-1', 'DIABDX=1', 'DIABDX=2', 'JTPAIN=-1', 'JTPAIN=1',
+            'JTPAIN=2', 'ARTHDX=-1', 'ARTHDX=1', 'ARTHDX=2', 'ARTHTYPE=-1',
+            'ARTHTYPE=1', 'ARTHTYPE=2', 'ARTHTYPE=3', 'ASTHDX=1', 'ASTHDX=2',
+            'ADHDADDX=-1', 'ADHDADDX=1', 'ADHDADDX=2', 'PREGNT=-1', 'PREGNT=1',
+            'PREGNT=2', 'WLKLIM=-1', 'WLKLIM=1', 'WLKLIM=2', 'ACTLIM=-1',
+            'ACTLIM=1', 'ACTLIM=2', 'SOCLIM=-1', 'SOCLIM=1', 'SOCLIM=2',
+            'COGLIM=-1', 'COGLIM=1', 'COGLIM=2', 'DFHEAR42=-1', 'DFHEAR42=1',
+            'DFHEAR42=2', 'DFSEE42=-1', 'DFSEE42=1', 'DFSEE42=2',
+            'ADSMOK42=-1', 'ADSMOK42=1', 'ADSMOK42=2', 'PHQ242=-1', 'PHQ242=0',
+            'PHQ242=1', 'PHQ242=2', 'PHQ242=3', 'PHQ242=4', 'PHQ242=5',
+            'PHQ242=6', 'EMPST=-1', 'EMPST=1', 'EMPST=2', 'EMPST=3', 'EMPST=4',
+            'POVCAT=1', 'POVCAT=2', 'POVCAT=3', 'POVCAT=4', 'POVCAT=5',
+            'INSCOV=1', 'INSCOV=2', 'INSCOV=3', 'RACE']
+
+
+  y = df[response_name].values
+  X = df[col_names].values
+
+  # Split the data
+  train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=seed)
+  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=seed)
+  
+  # Normalize the data
+  scaler_x = StandardScaler()
+  scaler_y = StandardScaler()
+  train_x = scaler_x.fit_transform(train_x)
+  train_y = scaler_y.fit_transform(train_y.reshape(-1, 1))
+  test_x = scaler_x.transform(test_x)
+  test_y = scaler_y.transform(test_y.reshape(-1, 1))
+  cal_x = scaler_x.transform(cal_x)
+  cal_y = scaler_y.transform(cal_y.reshape(-1, 1))
+  
+  # Save the data
+  savedir = f'./raw/MEPS_20/seed_{seed}'
+  os.makedirs(savedir, exist_ok=True)
+  # np.save(os.path.join(savedir, 'data.npy'), np.stack([X,Y]))
+  joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
+  joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
+  
+  all_data = {
+    'train_x': train_x,
+    'train_y': train_y,
+    'test_x': test_x,
+    'test_y': test_y,
+    'cal_x': cal_x,
+    'cal_y': cal_y,
+  }
+  np.save(os.path.join(savedir, 'all_data.npy'), all_data)
+  # Save the metadata of the dataset
+  with open(f'./raw/MEPS_20/metadata.txt', 'w') as f:
+    f.write(f'Train Data Shape: {train_x.shape}, {train_y.shape}\n')
+    f.write(f'Test Data Shape: {test_x.shape}, {test_y.shape}\n')
+    f.write(f'Calibration Data Shape: {cal_x.shape}, {cal_y.shape}\n')
+  
+    
+  ##############################################################################
+  # MEPS 21
+  ##############################################################################
+
+  # Load the processed meps_21_reg.csv, extract features X and response y
+  df = pd.read_csv('meps_21_reg.csv')
+  column_names = df.columns
+  response_name = "UTILIZATION_reg"
+  column_names = column_names[column_names!=response_name]
+  column_names = column_names[column_names!="Unnamed: 0"]
+
+  col_names = ['AGE', 'PCS42', 'MCS42', 'K6SUM42', 'PERWT16F', 'REGION=1',
+            'REGION=2', 'REGION=3', 'REGION=4', 'SEX=1', 'SEX=2', 'MARRY=1',
+            'MARRY=2', 'MARRY=3', 'MARRY=4', 'MARRY=5', 'MARRY=6', 'MARRY=7',
+            'MARRY=8', 'MARRY=9', 'MARRY=10', 'FTSTU=-1', 'FTSTU=1', 'FTSTU=2',
+            'FTSTU=3', 'ACTDTY=1', 'ACTDTY=2', 'ACTDTY=3', 'ACTDTY=4',
+            'HONRDC=1', 'HONRDC=2', 'HONRDC=3', 'HONRDC=4', 'RTHLTH=-1',
+            'RTHLTH=1', 'RTHLTH=2', 'RTHLTH=3', 'RTHLTH=4', 'RTHLTH=5',
+            'MNHLTH=-1', 'MNHLTH=1', 'MNHLTH=2', 'MNHLTH=3', 'MNHLTH=4',
+            'MNHLTH=5', 'HIBPDX=-1', 'HIBPDX=1', 'HIBPDX=2', 'CHDDX=-1',
+            'CHDDX=1', 'CHDDX=2', 'ANGIDX=-1', 'ANGIDX=1', 'ANGIDX=2',
+            'MIDX=-1', 'MIDX=1', 'MIDX=2', 'OHRTDX=-1', 'OHRTDX=1', 'OHRTDX=2',
+            'STRKDX=-1', 'STRKDX=1', 'STRKDX=2', 'EMPHDX=-1', 'EMPHDX=1',
+            'EMPHDX=2', 'CHBRON=-1', 'CHBRON=1', 'CHBRON=2', 'CHOLDX=-1',
+            'CHOLDX=1', 'CHOLDX=2', 'CANCERDX=-1', 'CANCERDX=1', 'CANCERDX=2',
+            'DIABDX=-1', 'DIABDX=1', 'DIABDX=2', 'JTPAIN=-1', 'JTPAIN=1',
+            'JTPAIN=2', 'ARTHDX=-1', 'ARTHDX=1', 'ARTHDX=2', 'ARTHTYPE=-1',
+            'ARTHTYPE=1', 'ARTHTYPE=2', 'ARTHTYPE=3', 'ASTHDX=1', 'ASTHDX=2',
+            'ADHDADDX=-1', 'ADHDADDX=1', 'ADHDADDX=2', 'PREGNT=-1', 'PREGNT=1',
+            'PREGNT=2', 'WLKLIM=-1', 'WLKLIM=1', 'WLKLIM=2', 'ACTLIM=-1',
+            'ACTLIM=1', 'ACTLIM=2', 'SOCLIM=-1', 'SOCLIM=1', 'SOCLIM=2',
+            'COGLIM=-1', 'COGLIM=1', 'COGLIM=2', 'DFHEAR42=-1', 'DFHEAR42=1',
+            'DFHEAR42=2', 'DFSEE42=-1', 'DFSEE42=1', 'DFSEE42=2',
+            'ADSMOK42=-1', 'ADSMOK42=1', 'ADSMOK42=2', 'PHQ242=-1', 'PHQ242=0',
+            'PHQ242=1', 'PHQ242=2', 'PHQ242=3', 'PHQ242=4', 'PHQ242=5',
+            'PHQ242=6', 'EMPST=-1', 'EMPST=1', 'EMPST=2', 'EMPST=3', 'EMPST=4',
+            'POVCAT=1', 'POVCAT=2', 'POVCAT=3', 'POVCAT=4', 'POVCAT=5',
+            'INSCOV=1', 'INSCOV=2', 'INSCOV=3', 'RACE']
+
+
+  y = df[response_name].values
+  X = df[col_names].values
+
+    # Split the data
+    # Split the data
+  
+  
+  train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=seed)
+  test_x, cal_x, test_y, cal_y = train_test_split(test_x, test_y, test_size=0.5, random_state=seed)
+
+  # Normalize the data
+  scaler_x = StandardScaler()
+  scaler_y = StandardScaler()
+  train_x = scaler_x.fit_transform(train_x)
+  train_y = scaler_y.fit_transform(train_y.reshape(-1, 1))
+  test_x = scaler_x.transform(test_x)
+  test_y = scaler_y.transform(test_y.reshape(-1, 1))
+  cal_x = scaler_x.transform(cal_x)
+  cal_y = scaler_y.transform(cal_y.reshape(-1, 1))
+
+  # Save the data
+  savedir = f'./raw/MEPS_21/seed_{seed}'
+  os.makedirs(savedir, exist_ok=True)
+  # np.save(os.path.join(savedir, 'data.npy'), np.stack([X,Y]))
+  joblib.dump(scaler_x, os.path.join(savedir, 'scaler_x.pkl'))
+  joblib.dump(scaler_y, os.path.join(savedir, 'scaler_y.pkl'))
+
+  all_data = {
+    'train_x': train_x,
+    'train_y': train_y,
+    'test_x': test_x,
+    'test_y': test_y,
+    'cal_x': cal_x,
+    'cal_y': cal_y,
+  }
+
+  np.save(os.path.join(savedir, 'all_data.npy'), all_data)
+
+  # Save the metadata of the dataset
+  with open(f'./raw/MEPS_21/metadata.txt', 'w') as f:
+    f.write(f'Train Data Shape: {train_x.shape}, {train_y.shape}\n')
+    f.write(f'Test Data Shape: {test_x.shape}, {test_y.shape}\n')
+    f.write(f'Calibration Data Shape: {cal_x.shape}, {cal_y.shape}\n')
+      
 
   
-
+# 275 id check
 
 # %%
 if __name__ == '__main__':
   
-  if not os.path.exists('./raw/Unconditional_2d_data'):
-    unconditional_2d_data_generator()
-    print("Saved 2d Unconditional Data!")
-  if not os.path.exists('./raw/Concrete_Compressive_Strength'):
-    prepare_any_dataset(165,'Concrete_Compressive_Strength')
-    print("Saved 1d Concrete_Compressive_Strength Data!")
-  if not os.path.exists('./raw/Parkinsons'):
-    prepare_any_dataset(174,'Parkinsons')
-    print("Saved 1d Parkinsons Data!")
-  if not os.path.exists('./raw/White_Wine'):
-    prepare_any_dataset(186,'White_Wine')
-    print("Saved 1d White_Wine Data!")
-  if not os.path.exists('./raw/Energy_Efficiency'): # 2d 
-    prepare_any_dataset(242,'Energy_Efficiency')
-    print("Saved 2d Energy_Efficiency Data!")
-  if not os.path.exists('./raw/Solar_Flare'): # 3d 
-    prepare_any_dataset(89,'Solar_Flare')
-    print("Saved 2d Solar_Flare Data!")
-  if not os.path.exists('./raw/Unconditional_1d_data'):
-    unconditional_1d_data_generator()
-    print("Saved 1d Unconditional Data!")
+  # args = parse_args()
 
+  for seed in range(10):
+    # unconditional_2d_data_generator(seed)
+    # print("Saved 2d Unconditional Data!")
+    # prepare_any_dataset(165,'Concrete_Compressive_Strength',seed)
+    # print("Saved 1d Concrete_Compressive_Strength Data!")
+    # prepare_any_dataset(174,'Parkinsons',seed)
+    # print("Saved 1d Parkinsons Data!")
+    # prepare_any_dataset(186,'White_Wine',seed)
+    # print("Saved 1d White_Wine Data!")
+    # prepare_any_dataset(242,'Energy_Efficiency',seed)
+    # print("Saved 2d Energy_Efficiency Data!")
+    # prepare_any_dataset(89,'Solar_Flare',seed)
+    # print("Saved 2d Solar_Flare Data!")
+    # unconditional_1d_data_generator(seed)
+    # print("Saved 1d Unconditional Data!")
+    prepare_meps_data(seed)
+    print("Saved MEPS Data!")
 
 # %%

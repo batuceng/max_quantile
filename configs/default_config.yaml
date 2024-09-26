@@ -3,6 +3,7 @@ train:
   learning_rate: 0.001
   epochs: 149
   optimizer: 'Adam'
+  num_workers: 2
   quant_learning_rate: 0.01
 
 losses:
@@ -24,19 +25,16 @@ model:
 
 quantizer:
   quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
-
-add_remove_proto:
-  usage_mode: softlabelbased #"bincountbased", "softlabelbased"
-  every_n_epoch: 40
-  split_density_threshold: 0.01
-  remove_density_threshold: 0.001
+  add_remove_usage_mode: 'softlabelbased' #"bincountbased", "softlabelbased"
+  add_remove_every_n_epoch: 50
+  proto_split_density_threshold: 0.01
+  proto_remove_density_threshold: 0.001
   
-
 eval:
-  conformal_mode : "dens_th" # dens_th | prob_th
+  conformal_mode : "prob_th" # dens_th | prob_th
 
 log_dir: './logs'
-# dataset_path: './data/raw/Concrete_Compressive_Strength/all_data.npy'
-# dataset_path: './data/raw/Unconditional_2d_data/all_data.npy'
-dataset_path: './data/raw/Unconditional_1d_data/all_data.npy'
+dataset_path: './data/raw/Unconditional_1d_data/seed_0/all_data.npy'
 seed: 42
+device: 'cuda:0'
+verbose: false

@@ -70,7 +70,7 @@ class GridQuantizer(nn.Module):
     # Return area of each proto
     def get_areas_pyvoro(self):
         if self.dims == 1:
-            warnings.warn("Pyvoro is not implemented for 1d. Running Sklearn Voronoi!")
+            # warnings.warn("Pyvoro is not implemented for 1d. Running Sklearn Voronoi!")
             return self.get_areas_voronoi()
         elif self.dims in (2,3):
             self.compute_pyvoro_voroni()

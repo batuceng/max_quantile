@@ -1,6 +1,6 @@
 import torch
 # from models.model import RegressionModel
-from data.dataset import CustomDataset
+from data.dataset import CustomDataset,CustomDataloader
 from torch.utils.data import DataLoader
 import numpy as np
 import torch.nn.functional as F
@@ -26,18 +26,17 @@ def inference(dataloader, model, device):
     inputs = torch.cat(inputs_list, dim=0)   # Shape: [n_test, input_dim]
     return log_density_preds, targets, inputs
 
-def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
+def eval_model(config, model, quantizer, folder,alpha,mode,device):
     # Load calibration dataset and data loader
-    calib_dataset = CustomDataset(config['dataset_path'], mode='cal')
+    calib_dataset = CustomDataset(config['dataset_path'], mode='cal',device = device)
     bs = config['train']['batch_size'] if config['train']['batch_size'] != -1 else len(calib_dataset)
-    calib_data_loader = DataLoader(calib_dataset, batch_size=bs, shuffle=False)
+    calib_data_loader = CustomDataloader(calib_dataset, batch_size=bs, shuffle=False)
 
     # Load test dataset and data loader
-    test_dataset = CustomDataset(config['dataset_path'], mode='test')
+    test_dataset = CustomDataset(config['dataset_path'], mode='test',device = device)
     bs = config['train']['batch_size'] if config['train']['batch_size'] != -1 else len(test_dataset)
-    test_data_loader = DataLoader(test_dataset, batch_size=bs, shuffle=False)
+    test_data_loader = CustomDataloader(test_dataset, batch_size=bs, shuffle=False)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
     model.eval()
 
@@ -52,7 +51,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
 
     # Adjust calibration logits with Voronoi region areas to get log probabilities
     cal_log_prob_preds = cal_log_density_preds + torch.log(region_areas.unsqueeze(0))  # Shape: [n_cal, num_prototypes]
-    cal_prob_preds = torch.softmax(cal_log_prob_preds, dim=1)  # Convert to log probabilities
+    cal_prob_preds = torch.softmax(cal_log_prob_preds, dim=1)  # Convert to probabilities
     
     # 1. Calculate qhat_prob by prob, expand regions until qhat_prob reached sorted by probs (Calib: %90, %85 -> %85 - Max Prob First, threshould by prob)
     # 1. Calculate qhat_prob by prob, expand regions until qhat_prob reached sorted by densities (Calib: %90, %85 -> %85 - Max Dens First, threshould by prob)
@@ -62,6 +61,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
     mode in ["prob_th", "dens_th"]
     if mode == "prob_th":
         # cal_pi = torch.argsort(cal_prob_preds, dim=1, descending=True)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
+        # APS 
         cal_pi = torch.argsort(cal_log_density_preds, dim=1, descending=True)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
         cal_prob_preds_sorted = torch.gather(cal_prob_preds, 1, cal_pi)  # [n_cal, num_prototypes] # sort the probabilities according to the density values
         cal_prob_cumsum = torch.cumsum(cal_prob_preds_sorted, dim=1)  # [n_cal, num_prototypes] # Cumulative sum of probabilities all samples are 1 at the end
@@ -69,12 +69,13 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
         cal_scores = cal_prob_cumsum[torch.arange(len(cal_prob_preds)), cal_proto_indices_in_sorted] # values of the true class in the cumulative sum
         n = cal_targets.shape[0] # number of samples
         quantile_threshold = np.quantile(cal_scores.detach().cpu().numpy(), np.ceil((n + 1) * (1 - alpha)) / n, interpolation="higher") # quantile threshold
+        
         alpha = 1-alpha
     elif mode == "dens_th":
         # cal_log_density_preds_sorted, cal_log_density_preds_sorted_indices = torch.sort(cal_log_density_preds, dim=1, descending=True)
         # cal_proto_indices_in_sorted = cal_log_density_preds_sorted_indices.argsort(dim=1)[torch.arange(len(cal_prob_preds)), cal_proto_indices] # true class index in the sorted array
         # cal_scores = cal_log_density_preds_sorted[torch.arange(len(cal_log_density_preds)), cal_proto_indices_in_sorted] # values of the true class in the cumulative sum
-        cal_scores = cal_log_density_preds[torch.arange(len(cal_log_density_preds)), cal_proto_indices]
+        cal_scores = cal_log_density_preds[torch.arange(len(cal_log_density_preds)), cal_proto_indices] # take the target values densities as the scores
         n = cal_targets.shape[0] # number of samples
         # alpha = 1-alpha
         quantile_threshold = np.quantile(cal_scores.detach().cpu().numpy(), np.ceil((n + 1) * (1 - alpha)) / n, interpolation="higher") # quantile threshold
@@ -90,6 +91,7 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
     
     if mode == "prob_th":
         # test_pi = torch.argsort(test_prob_preds, dim=1, descending=True)  # [n_test, num_prototypes] # sort the probabilities according to the density values
+        # aps 
         test_pi = torch.argsort(test_log_density_preds, dim=1, descending=True)  # [n_test, num_prototypes] # sort the probabilities according to the density values
         test_prob_preds_sorted = torch.gather(test_prob_preds, 1, test_pi)  # [n_test, num_prototypes] # sort the probabilities according to the density values
         
@@ -110,7 +112,12 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
     pinaw_score = np.mean(region_set)
     # print(f"PINAW Score: {pinaw_score:.5f}")
     
-    print(f'coverage: {coverage:.5f}, PINAW: {pinaw_score:.5f}')
+
+    if config['verbose']:
+        print(f'coverage: {coverage:.5f}, PINAW: {pinaw_score:.5f}')
+    else:
+        print(f'{coverage:.5f},{pinaw_score:.5f}')
+    
     # Check the input_dim and output_dim
     input_dim = test_inputs.shape[1]
     output_dim = test_targets.shape[1]
@@ -122,12 +129,15 @@ def eval_model(config, model, quantizer, folder, alpha=0.9,mode = "prob_th"):
     if output_dim == 1:
         visualize_protos_1d(quantizer, cal_targets,prediction_set, folder + f"/protos_{alpha}.png")
         # Visualize a few samples
-        visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_logdens_{5}_alpha_{alpha}.png", ytitle="Log Density")
-        visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_logdens_{15}_alpha_{alpha}.png", ytitle="Log Density")
-        visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_logdens_{25}_alpha_{alpha}.png", ytitle="Log Density")
-        visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_prob_{5}_alpha_{alpha}.png", ytitle="Probability Dist")
-        visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_prob_{15}_alpha_{alpha}.png", ytitle="Probability Dist")
-        visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_prob_{25}_alpha_{alpha}.png", ytitle="Probability Dist")
+        try:
+            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_logdens_{5}_alpha_{alpha}.png", ytitle="Log Density")
+            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_logdens_{15}_alpha_{alpha}.png", ytitle="Log Density")
+            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_logdens_{25}_alpha_{alpha}.png", ytitle="Log Density")
+            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_prob_{5}_alpha_{alpha}.png", ytitle="Probability Dist")
+            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_prob_{15}_alpha_{alpha}.png", ytitle="Probability Dist")
+            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_prob_{25}_alpha_{alpha}.png", ytitle="Probability Dist")
+        except:
+            pass
     #     visualize_1d(test_targets, test_prob_preds, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
     # elif output_dim == 2:
     #     save_path = folder + f"/marginal_distribution_{alpha}.png"
@@ -191,7 +201,7 @@ def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inpu
     plt.savefig(save_path)
     # Show the figure
     plt.close()
-    
+
 def visualize_y_marginal_with_voronoi(quantizer, test_targets, prediction_set, save_path):
     # Plot the probability distribution over the 2D grid using the bin edges
     proto_centers = quantizer.get_protos_numpy()

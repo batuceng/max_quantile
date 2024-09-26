@@ -28,6 +28,9 @@ class ProtoClassifier(nn.Module):
     def forward(self, x):
         x = self.net(x)
         x = self.head(x)
+        if len(x.shape) == 3:
+            x = x.squeeze(0)
+            
         return x
     
     # Delete the prototypes in the given indices
