@@ -559,7 +559,10 @@ if __name__ == '__main__':
     # print("Saved 2d Solar_Flare Data!")
     # unconditional_1d_data_generator(seed)
     # print("Saved 1d Unconditional Data!")
-    prepare_meps_data(seed)
-    print("Saved MEPS Data!")
+    # prepare_meps_data(seed)
+    # print("Saved MEPS Data!")
+    prepare_any_dataset(275,'Bike_Sharing',seed)
+    print("Saved 1d Bike_Sharing Data!")
+  
 
 # %%

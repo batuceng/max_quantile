@@ -7,12 +7,12 @@ from tqdm import tqdm  # Import tqdm for the progress bar
 import argparse
 
 # Define the hyperparameters
-add_remove_every_n_epoch_list = [50, 100]
+add_remove_every_n_epoch_list = [50]
 proto_split_density_threshold_list = [0.001, 0.002, 0.01]
 proto_remove_density_threshold_list = [0.0001, 0.0002, 0.001]
-repulsion_loss_margin_list = [1e-2, 2e-3, 1e-3, 1e-4]
+repulsion_loss_margin_list = [1e-3, 1e-4]
 batch_size_list = [-1, 256]
-epoch_list = [150, 300, 500]
+epoch_list = [150, 300]
 seed_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 
@@ -54,7 +54,7 @@ hyperparameter_combinations = list(itertools.product(
 num_devices = 4
 
 # Max number of parallel processes
-max_workers = 16  # Adjust based on your system capabilities
+max_workers = 12  # Adjust based on your system capabilities
 # Ensure the results directory exists
 results_dir = os.path.dirname(results_path)
 if results_dir != '' and not os.path.exists(results_dir):
