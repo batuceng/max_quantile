@@ -18,11 +18,11 @@ model = R2CCP({'model_path':'logs/R2CCP/model_save_destination.pth', 'max_epochs
                'optimizer': 'adamw', 'lr':1e-4, 'weight_decay':1e-4,
                'ffn_num_layers':4, 'ffn_hidden_dim':100,
                'loss_weight':1., 'entropy_weight':0.2})
+
 # // model_path is where to save the trained model output (required parameter)
 
 # Fit against the data
 model.fit(X_train, y_train, X_cal, y_cal, scaler_x, scaler_y)
-
 
 test_dataset = CustomDataset(f"raw/{dataset}/all_data.npy",mode="test")
 X_test, Y_test = test_dataset.data_x, test_dataset.data_y

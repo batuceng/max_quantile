@@ -9,8 +9,8 @@ import argparse
 # Define the hyperparameters
 add_remove_every_n_epoch_list = [50]
 proto_split_density_threshold_list = [0.001, 0.002, 0.01]
-proto_remove_density_threshold_list = [0.0001, 0.0002, 0.001]
-repulsion_loss_margin_list = [1e-3, 1e-4]
+proto_remove_density_threshold_list = [0.0001, 0.0002,0.0005,0.001]
+repulsion_loss_margin_list = [1e-3, 5e-4, 1e-4]
 batch_size_list = [-1, 256]
 epoch_list = [150, 300]
 seed_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
