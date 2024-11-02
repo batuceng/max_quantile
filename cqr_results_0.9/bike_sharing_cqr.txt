@@ -1,0 +1,31 @@
+Running dataset: bike_sharing
+Processing seed 0
+Test Coverage: 89.07%
+PINAW: 2.9666
+Processing seed 1
+Test Coverage: 89.93%
+PINAW: 3.0579
+Processing seed 2
+Test Coverage: 91.25%
+PINAW: 3.2485
+Processing seed 3
+Test Coverage: 89.18%
+PINAW: 2.9131
+Processing seed 4
+Test Coverage: 92.00%
+PINAW: 3.0388
+Processing seed 5
+Test Coverage: 90.62%
+PINAW: 3.2082
+Processing seed 6
+Test Coverage: 90.10%
+PINAW: 2.6338
+Processing seed 7
+Test Coverage: 89.41%
+PINAW: 3.0980
+Processing seed 8
+Test Coverage: 89.07%
+PINAW: 2.8090
+Processing seed 9
+Test Coverage: 89.53%
+PINAW: 2.9438

@@ -1,0 +1,31 @@
+Running dataset: unconditional_1d
+Processing seed 0
+Test Coverage: 90.10%
+PINAW: 2.1927
+Processing seed 1
+Test Coverage: 90.45%
+PINAW: 2.2307
+Processing seed 2
+Test Coverage: 91.55%
+PINAW: 2.2035
+Processing seed 3
+Test Coverage: 91.50%
+PINAW: 2.4152
+Processing seed 4
+Test Coverage: 89.80%
+PINAW: 2.4228
+Processing seed 5
+Test Coverage: 89.30%
+PINAW: 2.2330
+Processing seed 6
+Test Coverage: 89.95%
+PINAW: 2.8007
+Processing seed 7
+Test Coverage: 89.45%
+PINAW: 2.5185
+Processing seed 8
+Test Coverage: 91.80%
+PINAW: 2.5075
+Processing seed 9
+Test Coverage: 89.65%
+PINAW: 2.7214

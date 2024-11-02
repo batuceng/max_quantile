@@ -11,7 +11,6 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 
-
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser(description='Generate data for the experiments')
@@ -24,14 +23,15 @@ def parse_args():
 #%%
 
 # Centers of the Gaussians
-def unconditional_2d_data_generator(seed):
+def unconditional_2d_data_generator(seed, outlier=False,size=100):
   
   # create always the same data
   np.random.seed(42)
   
   means = [(0, 0), 
           (3, 3), 
-          (-3, -4)]  
+          (-3, -4)]
+  
   # Covariance matrices
   covariances = [ [[1, 0], 
                   [0, 1]], 
@@ -44,6 +44,17 @@ def unconditional_2d_data_generator(seed):
           10000,
           10000]
 
+  if outlier:
+    means.append((6,-6))
+    covariances.append([[0.1, 0.0], 
+                        [0.0, 0.1]])
+    sizes.append(size)
+    
+    means.append((-6, 6))
+    covariances.append([[0.1, 0.0], 
+                        [0.0, 0.1]])
+    sizes.append(size)
+    
   # Grid space (-7,7)x(-7,7)
   x = np.linspace(-7, 7, 200)
   y = np.linspace(-7, 7, 200)
@@ -69,6 +80,8 @@ def unconditional_2d_data_generator(seed):
   Z /= np.sum(Z)
 
   savedir = f'./raw/Unconditional_2d_data/seed_{seed}'
+  if outlier:
+    savedir = f'./raw/Unconditional_2d_data_outlier_{size}/seed_{seed}'
   os.makedirs(savedir, exist_ok=True) 
   np.save(os.path.join(savedir, 'pdf.npy'), np.stack([X,Y,Z]))
 
@@ -109,6 +122,7 @@ def unconditional_2d_data_generator(seed):
   plt.ylabel('Y-axis')
   plt.savefig(os.path.join(savedir, 'pdf.pdf'))
   plt.show()
+  plt.close()
 
   # Plot the 2D PDF with data samples
   plt.figure(figsize=(8, 8))
@@ -120,15 +134,38 @@ def unconditional_2d_data_generator(seed):
   plt.ylabel('Y-axis')
   plt.savefig(os.path.join(savedir, 'pdf_sampled.pdf'))
   plt.show()
+  plt.close()
+  
+  
+  # Plot train, test, and calibration data with different colors for each class
+  plt.figure(figsize=(8, 8))
+  # plt.contourf(X, Y, Z, levels=20, cmap='viridis')
+  # plt.colorbar()
+
+  # Plot train data
+  plt.scatter(train_y[:, 0], train_y[:, 1], c='red', s=10, marker='o', label='Train', alpha=0.5)
+  # Plot test data
+  plt.scatter(test_y[:, 0], test_y[:, 1], c='green', s=10, marker='s', label='Test', alpha=0.5)
+  # Plot calibration data
+  plt.scatter(cal_y[:, 0], cal_y[:, 1], c='blue', s=10, marker='x', label='Cal', alpha=0.5)
+  
+  plt.title('Train, Test, and Calibration Data with Different Colors for Each Class')
+  plt.xlabel('X-axis')
+  plt.ylabel('Y-axis')
+  plt.legend()
+  plt.savefig(os.path.join(savedir, 'pdf_train_test_cal.pdf'))
+  plt.show()
+  plt.close()
   
   
 def prepare_any_dataset(dataset_id, name,seed): 
-    import numpy as np
-    import pandas as pd
-    import os
-    import joblib
-    
+    """Prepare Any UCI Repo Dataset
 
+  Args:
+      dataset_id (_type_): ID of Dataset in UCL
+      name (_type_): Dataset name
+      seed (_type_): Seed for train/test split
+  """
     dataset = fetch_ucirepo(id=dataset_id) 
     X = dataset.data.features
     y = dataset.data.targets
@@ -545,6 +582,7 @@ if __name__ == '__main__':
   # args = parse_args()
 
   for seed in range(10):
+    unconditional_2d_data_generator(seed, outlier=True,size=1000)
     # unconditional_2d_data_generator(seed)
     # print("Saved 2d Unconditional Data!")
     # prepare_any_dataset(165,'Concrete_Compressive_Strength',seed)
@@ -561,8 +599,8 @@ if __name__ == '__main__':
     # print("Saved 1d Unconditional Data!")
     # prepare_meps_data(seed)
     # print("Saved MEPS Data!")
-    prepare_any_dataset(275,'Bike_Sharing',seed)
-    print("Saved 1d Bike_Sharing Data!")
+    # prepare_any_dataset(275,'Bike_Sharing',seed)
+    # print("Saved 1d Bike_Sharing Data!")
   
 
 # %%

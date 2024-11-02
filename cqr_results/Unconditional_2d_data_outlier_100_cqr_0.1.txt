@@ -1,0 +1,20 @@
+Test Coverage: 3.77%
+PINAW: 0.0927
+Test Coverage: 3.01%
+PINAW: 0.0760
+Test Coverage: 2.68%
+PINAW: 0.0771
+Test Coverage: 2.88%
+PINAW: 0.0758
+Test Coverage: 2.58%
+PINAW: 0.0716
+Test Coverage: 2.88%
+PINAW: 0.0771
+Test Coverage: 2.52%
+PINAW: 0.0726
+Test Coverage: 3.01%
+PINAW: 0.0883
+Test Coverage: 3.34%
+PINAW: 0.0802
+Test Coverage: 2.81%
+PINAW: 0.0720

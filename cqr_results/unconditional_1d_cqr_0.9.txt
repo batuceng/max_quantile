@@ -1,0 +1,36 @@
+Test Coverage: 90.10%
+PINAW: 2.2175
+Test Coverage: 89.95%
+PINAW: 2.2201
+Test Coverage: 89.90%
+PINAW: 2.3068
+Test Coverage: 89.85%
+PINAW: 2.4108
+Test Coverage: 89.90%
+PINAW: 2.3173
+Test Coverage: 89.85%
+PINAW: 2.2796
+Test Coverage: 89.85%
+PINAW: 2.5459
+Test Coverage: 89.85%
+PINAW: 2.2898
+Test Coverage: 89.90%
+PINAW: 2.2288
+Test Coverage: 90.10%
+PINAW: 2.1892
+Test Coverage: 89.90%
+PINAW: 2.3103
+Traceback (most recent call last):
+  File "/home/halil/max_quantile/cqr_main.py", line 194, in <module>
+    from scipy.stats import gaussian_kde
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/scipy/stats/__init__.py", line 606, in <module>
+    from ._stats_py import *
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/scipy/stats/_stats_py.py", line 42, in <module>
+    from scipy.optimize import milp, LinearConstraint
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/scipy/optimize/__init__.py", line 415, in <module>
+    from ._root import *
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/scipy/optimize/_root.py", line 15, in <module>
+    from ._minpack_py import _root_hybr, leastsq
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/scipy/optimize/_minpack_py.py", line 2, in <module>
+    from . import _minpack
+KeyboardInterrupt

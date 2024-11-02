@@ -7,13 +7,21 @@ from tqdm import tqdm  # Import tqdm for the progress bar
 import argparse
 
 # Define the hyperparameters
-add_remove_every_n_epoch_list = [50]
-proto_split_density_threshold_list = [0.001, 0.002, 0.01]
-proto_remove_density_threshold_list = [0.0001, 0.0002,0.0005,0.001]
-repulsion_loss_margin_list = [1e-3, 5e-4, 1e-4]
-batch_size_list = [-1, 256]
-epoch_list = [150, 300]
-seed_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+# proto_split_density_threshold_list = [0.001]
+# proto_remove_density_threshold_list = [0.0001]
+
+batch_size_list = [-1]
+
+
+add_remove_every_n_epoch_list = [99999999]
+proto_remove_density_threshold_list = [0.0001,0.0005]
+proto_split_density_threshold_list = [0.001, 0.01]
+learning_rate_list = [1e-3]
+quant_learning_rate_list = [1e-2,1e-3]
+repulsion_loss_margin_list = [1e-1,1e-2]
+epoch_list = [250]
+seed_list = [0,1,2,3,4,5,6,7,8,9]
 
 
 # add_remove_every_n_epoch_list = [50]
@@ -47,6 +55,8 @@ hyperparameter_combinations = list(itertools.product(
     repulsion_loss_margin_list,
     batch_size_list,
     epoch_list,
+    learning_rate_list,
+    quant_learning_rate_list,
     seed_list
 ))
 
@@ -54,7 +64,7 @@ hyperparameter_combinations = list(itertools.product(
 num_devices = 4
 
 # Max number of parallel processes
-max_workers = 12  # Adjust based on your system capabilities
+max_workers = 8  # Adjust based on your system capabilities
 # Ensure the results directory exists
 results_dir = os.path.dirname(results_path)
 if results_dir != '' and not os.path.exists(results_dir):
@@ -74,6 +84,8 @@ def run_experiment(params):
         repulsion_loss_margin,
         batch_size,
         epochs,
+        learning_rate,
+        quant_learning_rate,
         seed,
         device
     ) = params
@@ -90,6 +102,8 @@ def run_experiment(params):
         '--config', config_path,
         '--batch_size', str(batch_size),
         '--epochs', str(epochs),
+        '--learning_rate', str(learning_rate),
+        '--quant_learning_rate', str(quant_learning_rate),
     ]
 
     try:

@@ -1,0 +1,167 @@
+Test Coverage: 80.73%
+PINAW: 8.4490
+Test Coverage: 81.67%
+PINAW: 8.6057
+Test Coverage: 81.50%
+PINAW: 8.3667
+Test Coverage: 82.97%
+PINAW: 8.3591
+Test Coverage: 82.00%
+PINAW: 8.4460
+Test Coverage: 82.67%
+PINAW: 8.5191
+Test Coverage: 80.73%
+PINAW: 8.3101
+Test Coverage: 82.37%
+PINAW: 8.4594
+Test Coverage: 83.97%
+PINAW: 8.6082
+Test Coverage: 81.20%
+PINAW: 8.4257
+Test Coverage: 82.37%
+PINAW: 8.3935
+Test Coverage: 82.00%
+PINAW: 8.4788
+Test Coverage: 80.20%
+PINAW: 8.4839
+Test Coverage: 82.83%
+PINAW: 8.3694
+Test Coverage: 81.20%
+PINAW: 8.5017
+Test Coverage: 81.97%
+PINAW: 8.6436
+Test Coverage: 79.93%
+PINAW: 8.2504
+Test Coverage: 80.50%
+PINAW: 8.5221
+Test Coverage: 83.80%
+PINAW: 8.7945
+Test Coverage: 80.47%
+PINAW: 8.3935
+Test Coverage: 83.97%
+PINAW: 8.6465
+Test Coverage: 80.83%
+PINAW: 8.7974
+Test Coverage: 81.60%
+PINAW: 8.7994
+Test Coverage: 80.80%
+PINAW: 8.5031
+Test Coverage: 82.57%
+PINAW: 8.5022
+Test Coverage: 81.27%
+PINAW: 8.7463
+Test Coverage: 81.33%
+PINAW: 8.7183
+Test Coverage: 81.57%
+PINAW: 8.6551
+Test Coverage: 81.73%
+PINAW: 8.3961
+Test Coverage: 81.67%
+PINAW: 8.6475
+Test Coverage: 82.00%
+PINAW: 8.3959
+Test Coverage: 80.70%
+PINAW: 9.2710
+Test Coverage: 82.10%
+PINAW: 8.6676
+Test Coverage: 81.13%
+PINAW: 8.6646
+Test Coverage: 81.07%
+PINAW: 9.3873
+Traceback (most recent call last):
+  File "/home/halil/max_quantile/cqr_main.py", line 5, in <module>
+    import torch
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/__init__.py", line 1921, in <module>
+    from . import _meta_registrations
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/_meta_registrations.py", line 9, in <module>
+    from torch._decomp import (
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/_decomp/__init__.py", line 245, in <module>
+    import torch._refs
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/_refs/__init__.py", line 6442, in <module>
+    import torch._refs.nn.functional
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/_refs/nn/functional/__init__.py", line 1197, in <module>
+    @register_decomposition(aten.pixel_unshuffle)
+                            ^^^^^^^^^^^^^^^^^^^^
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/_ops.py", line 919, in __getattr__
+    op, overload_names = torch._C._jit_get_operation(qualified_op_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/halil/max_quantile/cqr_main.py", line 295, in <module>
+    main()
+  File "/home/halil/max_quantile/cqr_main.py", line 245, in main
+    train_dataset = CustomDataset(args.dataset_path, mode='train', device=device)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/halil/max_quantile/data/dataset.py", line 31, in __init__
+    self.data_x = torch.tensor(self.data_x, dtype=torch.float32).to(device)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/cuda/__init__.py", line 306, in _lazy_init
+    queued_call()
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/cuda/__init__.py", line 173, in _check_capability
+    for d in range(device_count()):
+                   ^^^^^^^^^^^^^^
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/cuda/__init__.py", line 748, in device_count
+    nvml_count = -1 if torch.version.hip else _device_count_nvml()
+                                              ^^^^^^^^^^^^^^^^^^^^
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/cuda/__init__.py", line 709, in _device_count_nvml
+    raw_cnt = _raw_device_count_nvml()
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/cuda/__init__.py", line 617, in _raw_device_count_nvml
+    rc = nvml_h.nvmlInit()
+         ^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+Test Coverage: 82.43%
+PINAW: 8.3750
+Traceback (most recent call last):
+  File "/home/halil/max_quantile/cqr_main.py", line 295, in <module>
+    main()
+  File "/home/halil/max_quantile/cqr_main.py", line 272, in main
+    loss.backward()
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/_tensor.py", line 525, in backward
+    torch.autograd.backward(
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/autograd/__init__.py", line 267, in backward
+    _engine_run_backward(
+  File "/home/halil/miniconda3/envs/R2CCP/lib/python3.11/site-packages/torch/autograd/graph.py", line 744, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+Test Coverage: 81.23%
+PINAW: 8.3326
+Test Coverage: 80.77%
+PINAW: 8.4904
+Test Coverage: 81.83%
+PINAW: 8.3672
+Test Coverage: 81.77%
+PINAW: 8.3187
+Test Coverage: 81.60%
+PINAW: 8.4561
+Test Coverage: 81.27%
+PINAW: 8.6378
+Test Coverage: 82.63%
+PINAW: 8.5391
+Test Coverage: 81.40%
+PINAW: 8.5128
+Test Coverage: 82.57%
+PINAW: 8.4959
+Test Coverage: 82.57%
+PINAW: 8.3888
+Test Coverage: 82.77%
+PINAW: 8.4928
+Test Coverage: 81.87%
+PINAW: 8.3819
+Test Coverage: 82.00%
+PINAW: 8.5100
+Test Coverage: 83.40%
+PINAW: 8.4897
+Test Coverage: 81.57%
+PINAW: 8.3488
+Test Coverage: 81.33%
+PINAW: 8.6755
+Test Coverage: 81.93%
+PINAW: 8.3431
+Test Coverage: 81.53%
+PINAW: 8.3633
+Test Coverage: 82.40%
+PINAW: 8.4734
+Test Coverage: 82.50%
+PINAW: 8.3915

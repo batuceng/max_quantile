@@ -30,6 +30,7 @@ def parse_arguments():
     parser.add_argument('--config', type=str, default='./configs/default_config.yaml', help="Path to the config file.")
     parser.add_argument('--quantizer_type', type=str, help="Override the learning rate in the config.")
     parser.add_argument('--learning_rate', type=float, help="Override the learning rate in the config.")
+    parser.add_argument('--quant_learning_rate', type=float, help="Override the quant learning rate in the config.")
     parser.add_argument('--epochs', type=int, help="Override the number of epochs in the config.")
     parser.add_argument('--batch_size', type=int, help="Override the batch size in the config.")
     parser.add_argument('--run_id', type=int, default=1, help="Unique identifier for the training run.")
@@ -73,6 +74,8 @@ def update_config_with_args(config, args):
         config['device'] = args.device
     if args.dataset_path is not None:
         config['dataset_path'] = args.dataset_path
+    if args.quant_learning_rate is not None:
+        config['train']['quant_learning_rate'] = args.quant_learning_rate
     
     config['run_id'] = args.run_id
     

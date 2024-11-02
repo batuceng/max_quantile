@@ -1,0 +1,31 @@
+Running dataset: energy_efficiency
+Processing seed 0
+Test Coverage: 80.52%
+PINAW: 7.6369
+Processing seed 1
+Test Coverage: 88.31%
+PINAW: 6.9858
+Processing seed 2
+Test Coverage: 85.71%
+PINAW: 6.8789
+Processing seed 3
+Test Coverage: 79.22%
+PINAW: 6.0533
+Processing seed 4
+Test Coverage: 88.31%
+PINAW: 6.4216
+Processing seed 5
+Test Coverage: 83.12%
+PINAW: 6.8362
+Processing seed 6
+Test Coverage: 89.61%
+PINAW: 9.4497
+Processing seed 7
+Test Coverage: 85.71%
+PINAW: 7.2170
+Processing seed 8
+Test Coverage: 85.71%
+PINAW: 8.3321
+Processing seed 9
+Test Coverage: 80.52%
+PINAW: 7.6256

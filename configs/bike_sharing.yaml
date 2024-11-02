@@ -4,7 +4,7 @@ train:
   epochs: 149
   optimizer: 'Adam'
   num_workers: 1
-  quant_learning_rate: 0.01
+  quant_learning_rate: 0.001
 
 losses:
   # cross entropy loss

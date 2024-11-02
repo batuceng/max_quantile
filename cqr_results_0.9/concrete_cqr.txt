@@ -1,0 +1,31 @@
+Running dataset: concrete
+Processing seed 0
+Test Coverage: 87.38%
+PINAW: 2.9099
+Processing seed 1
+Test Coverage: 85.44%
+PINAW: 2.7207
+Processing seed 2
+Test Coverage: 91.26%
+PINAW: 3.1504
+Processing seed 3
+Test Coverage: 90.29%
+PINAW: 3.1966
+Processing seed 4
+Test Coverage: 86.41%
+PINAW: 3.0726
+Processing seed 5
+Test Coverage: 86.41%
+PINAW: 2.8723
+Processing seed 6
+Test Coverage: 88.35%
+PINAW: 3.1703
+Processing seed 7
+Test Coverage: 87.38%
+PINAW: 2.9624
+Processing seed 8
+Test Coverage: 92.23%
+PINAW: 2.8690
+Processing seed 9
+Test Coverage: 88.35%
+PINAW: 2.9214

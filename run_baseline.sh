@@ -2,16 +2,17 @@
 
 # Define the names of the datasets (without the .yaml extension)
 names=(
-    "bike_sharing"
-    "energy_efficiency"
-    "MEPS_20"
-    "parkinsons"
-    "uncond_2d"
-    "concrete"
-    "MEPS_19"
-    "MEPS_21"
-    "uncond_1d"
-    "white_wine"
+    # "bike_sharing"
+    # "energy_efficiency"
+    # "MEPS_20"
+    # "parkinsons"
+    "Unconditional_2d_data_outlier_100"
+    "Unconditional_2d_data_outlier_1000"
+    # "concrete"
+    # "MEPS_19"
+    # "MEPS_21"
+    # "uncond_1d"
+    # "white_wine"
 )
 
 # Number of GPUs available
@@ -29,7 +30,8 @@ for name in "${names[@]}"; do
 
     # Define paths specific to the current dataset
     log_file="results_grid/$name.log"
-    config_path="/home/halil/max_quantile/configs_grid/$name.yaml"
+    # config_path="/home/halil/max_quantile/configs_grid/$name.yaml"
+    config_path="/home/halil/max_quantile/configs_grid/unconditional_2d.yaml"
     data_path="/home/halil/max_quantile/data/raw/$name"
 
     # Remove existing log file if it exists to start fresh

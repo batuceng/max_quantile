@@ -1,17 +1,17 @@
 train:
   batch_size: -1
   learning_rate: 0.001
-  epochs: 149
+  epochs: 200
   optimizer: 'Adam'
   num_workers: 2
-  quant_learning_rate: 0.01
+  quant_learning_rate: 0.001
 
 losses:
   # cross entropy loss
   cross_entropy_weight: 1.0
   cross_entropy_temperature: 1.0
   # distance loss
-  entropy_weight: 0.0
+  entropy_weight: 0.1
   mindist_weight: 1.0
   # Repulsion loss
   repulsion_loss_weight: 0.1
@@ -27,14 +27,13 @@ quantizer:
   quantizer_type: 'voronoi' # it can take "voronoi", "grid", "kdtree"
   add_remove_usage_mode: 'softlabelbased' #"bincountbased", "softlabelbased"
   add_remove_every_n_epoch: 50
-  proto_split_density_threshold: 0.01
-  proto_remove_density_threshold: 0.001
-  
+  proto_split_density_threshold:  0.05
+  proto_remove_density_threshold: 0.0001
 eval:
   conformal_mode : "prob_th" # dens_th | prob_th
 
 log_dir: './logs'
-dataset_path: './data/raw/Unconditional_1d_data/all_data.npy'
+dataset_path: './data/raw/unconditional_1d/seed_0/all_data.npy'
 seed: 42
-device: 'cuda:0'
+device: 'cuda:1'
 verbose: false

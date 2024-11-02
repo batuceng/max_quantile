@@ -1,0 +1,31 @@
+Running dataset: MEPS_19
+Processing seed 0
+Test Coverage: 50.44%
+PINAW: 0.1946
+Processing seed 1
+Test Coverage: 54.31%
+PINAW: 0.2830
+Processing seed 2
+Test Coverage: 45.75%
+PINAW: 0.1910
+Processing seed 3
+Test Coverage: 51.52%
+PINAW: 0.2221
+Processing seed 4
+Test Coverage: 47.72%
+PINAW: 0.2231
+Processing seed 5
+Test Coverage: 49.68%
+PINAW: 0.2107
+Processing seed 6
+Test Coverage: 50.89%
+PINAW: 0.2158
+Processing seed 7
+Test Coverage: 51.46%
+PINAW: 0.1996
+Processing seed 8
+Test Coverage: 51.71%
+PINAW: 0.2103
+Processing seed 9
+Test Coverage: 49.18%
+PINAW: 0.2360

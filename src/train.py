@@ -79,7 +79,10 @@ def train(config):
         assert usage_mode in ["bincountbased", "softlabelbased","none"]
         # Remove Protos
         if usage_mode != "none":
-            if (((epoch+1)%add_remove_every_n_epoch_add_remove) == 0) and \
+            # if (((epoch+1)%add_remove_every_n_epoch_add_remove) == 0) and \
+            #     (epoch < (config['train']['epochs'])*0.7) and \
+            #         (config['quantizer']['quantizer_type'] == 'voronoi'):
+            if ((epoch+1) == add_remove_every_n_epoch_add_remove) and \
                 (epoch < (config['train']['epochs'])*0.7) and \
                     (config['quantizer']['quantizer_type'] == 'voronoi'):
                 with torch.no_grad():

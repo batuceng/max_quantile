@@ -130,12 +130,12 @@ def eval_model(config, model, quantizer, folder,alpha,mode,device):
         visualize_protos_1d(quantizer, cal_targets,prediction_set, folder + f"/protos_{alpha}.png")
         # Visualize a few samples
         try:
-            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_logdens_{5}_alpha_{alpha}.png", ytitle="Log Density")
-            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_logdens_{15}_alpha_{alpha}.png", ytitle="Log Density")
-            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_logdens_{25}_alpha_{alpha}.png", ytitle="Log Density")
-            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_prob_{5}_alpha_{alpha}.png", ytitle="Probability Dist")
-            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_prob_{15}_alpha_{alpha}.png", ytitle="Probability Dist")
-            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_prob_{25}_alpha_{alpha}.png", ytitle="Probability Dist")
+            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_logdens_{5}_alpha_{alpha}.png", ytitle="Log Density  ($\log p_i(x)$)")
+            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_logdens_{15}_alpha_{alpha}.png", ytitle="Log Density  ($\log p_i(x)$)")
+            visualize_test_sample_1d(quantizer, test_log_density_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_logdens_{25}_alpha_{alpha}.png", ytitle="Log Density  ($\log p_i(x)$)")
+            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=5, save_path=folder + f"/sample_prob_{5}_alpha_{alpha}.png", ytitle="Probability  ($\hat{P}[y \in R_i \mid x]$)")
+            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=15, save_path=folder + f"/sample_prob_{15}_alpha_{alpha}.png", ytitle="Probability  ($\hat{P}[y \in R_i \mid x]$)")
+            visualize_test_sample_1d(quantizer, test_prob_preds, test_targets, test_inputs, prediction_set, idx=25, save_path=folder + f"/sample_prob_{25}_alpha_{alpha}.png", ytitle="Probability  ($\hat{P}[y \in R_i \mid x]$)")
         except:
             pass
     #     visualize_1d(test_targets, test_prob_preds, quantizer, mask, sorted_indices, correct_predictions, coverage, quantile_threshold,save_path)
@@ -163,6 +163,7 @@ def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inpu
         idx: The index of the sample to visualize.
         save_path: Path where to save the generated plot.
     """
+    import matplotlib.pyplot as plt
     # Extract prototypes as numpy array
     protos_np = quantizer.get_protos_numpy()  # Assuming this method returns prototypes in a numpy array
     region_areas = quantizer.get_areas_pyvoro()  # Assuming this method returns areas in a numpy array
@@ -175,27 +176,33 @@ def visualize_test_sample_1d(quantizer, visual_variable, test_targets, test_inpu
     plt.figure(figsize=(10, 6))
     
     # Plot the predicted log density as bar plots within decision boundaries
+    covered_label = 'Covered'
+    uncovered_label = 'Uncovered'
+    
     for i, proto in enumerate(protos_np):
         height = sample_visual_variable[i]  # Use the predicted log density as the height of the bar
         left, right = decision_boundaries[i]
         width = right - left
         center = (right + left) / 2
         if i in sample_prediction_set:
-            plt.bar(center, height.item(), width=width.item(), align='center', alpha=0.5, label='Log Density' if i == 0 else None, color='red')
+            plt.bar(center, height.item(), width=width.item(), align='center', alpha=0.5, 
+                    label=covered_label, color='red')
+            covered_label = None  # Set label to None after the first instance
         else:
-            plt.bar(center, height.item(), width=width.item(), align='center', alpha=0.5, label='Log Density' if i == 0 else None, color='blue')
-
+            plt.bar(center, height.item(), width=width.item(), align='center', alpha=0.5, 
+                    label=uncovered_label, color='blue')
+            uncovered_label = None  # Set label to None after the first instance
+    
     # Scatter plot for prototypes
     plt.scatter(protos_np, np.zeros_like(protos_np), label='Prototypes', color='black', marker='D', zorder=5)
 
     # Plot target values marked with 'x'
-    plt.scatter(sample_target, np.zeros_like(sample_target), label='Target Value', color='green', marker='x', zorder=6)
+    #plt.scatter(sample_target, 0, label='Target Value', color='green', marker='x', zorder=6)
 
     # Add titles and labels
-    plt.title(f"Sample {idx} Visualization")
-    plt.xlabel('Prototypes')
-    plt.ylabel(f"{ytitle} / Target Value")
-    plt.legend()
+    plt.xlabel('Prototypes ($c_i$)')
+    plt.ylabel(f"{ytitle}")
+    plt.legend(loc='upper left')
     
     # Save the figure
     plt.savefig(save_path)
@@ -226,18 +233,17 @@ def visualize_y_marginal_with_voronoi(quantizer, test_targets, prediction_set, s
         
         ax.fill(*zip(*polygon), color = color, alpha=0.5)
     
-    
     ax.scatter(proto_centers[:, 0], proto_centers[:, 1], marker='x', c='red', s=1)
     ax.set_xlim(proto_centers[:, 0].min() - 0.1, proto_centers[:, 0].max() + 0.1)
     ax.set_ylim(proto_centers[:, 1].min() - 0.1, proto_centers[:, 1].max() + 0.1)
-    ax.set_title('Probability Distribution over the 2D Space with Voronoi Tessellation')
-    ax.set_xlabel('X-axis')
-    ax.set_ylabel('Y-axis')
+    # ax.set_title('Probability Distribution over the 2D Space with Voronoi Tessellation')
+    ax.set_xlabel('Y1-axis')
+    ax.set_ylabel('Y2-axis')
 
     # Add colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    plt.colorbar(sm, ax=ax, label='Probability')
+    # plt.colorbar(sm, ax=ax, label='Probability')
 
     plt.show()
     plt.savefig(save_path)

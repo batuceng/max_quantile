@@ -1,0 +1,31 @@
+Running dataset: white_wine
+Processing seed 0
+Test Coverage: 90.77%
+PINAW: 2.9623
+Processing seed 1
+Test Coverage: 86.92%
+PINAW: 2.8490
+Processing seed 2
+Test Coverage: 90.62%
+PINAW: 2.8173
+Processing seed 3
+Test Coverage: 91.23%
+PINAW: 2.8019
+Processing seed 4
+Test Coverage: 89.08%
+PINAW: 3.0438
+Processing seed 5
+Test Coverage: 89.54%
+PINAW: 3.1914
+Processing seed 6
+Test Coverage: 88.46%
+PINAW: 2.5320
+Processing seed 7
+Test Coverage: 90.00%
+PINAW: 2.9296
+Processing seed 8
+Test Coverage: 91.08%
+PINAW: 2.6076
+Processing seed 9
+Test Coverage: 90.62%
+PINAW: 3.1707

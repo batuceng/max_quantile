@@ -1,0 +1,20 @@
+Test Coverage: 81.99%
+PINAW: 8.5004
+Test Coverage: 81.56%
+PINAW: 8.2640
+Test Coverage: 81.66%
+PINAW: 8.6822
+Test Coverage: 81.56%
+PINAW: 8.3495
+Test Coverage: 81.95%
+PINAW: 8.5355
+Test Coverage: 82.32%
+PINAW: 9.0959
+Test Coverage: 81.46%
+PINAW: 8.4058
+Test Coverage: 82.02%
+PINAW: 8.3573
+Test Coverage: 81.66%
+PINAW: 8.4704
+Test Coverage: 82.42%
+PINAW: 8.6103
